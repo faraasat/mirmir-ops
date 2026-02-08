@@ -1,0 +1,31 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "build:chrome": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/chrome/**"]
+    },
+    "build:firefox": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/firefox/**"]
+    },
+    "build:all": {
+      "dependsOn": ["build:chrome", "build:firefox"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "cache": false
+    }
+  }
+}
