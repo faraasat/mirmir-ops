@@ -67,9 +67,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             {getStatus()}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            {entry.context?.url && (
+            {entry.context?.url && entry.context.url !== 'unknown' && (
               <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                {new URL(entry.context.url).hostname}
+                {(() => {
+                  try { return new URL(entry.context!.url!).hostname; }
+                  catch { return entry.context!.url; }
+                })()}
               </span>
             )}
             <span className="text-xs text-muted-foreground">

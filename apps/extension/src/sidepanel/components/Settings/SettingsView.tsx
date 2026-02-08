@@ -676,7 +676,10 @@ export function SettingsView() {
         <h3 className="font-semibold mb-3">Voice</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm">Enable Voice Input</span>
+            <div>
+              <span className="text-sm">Voice Input</span>
+              <p className="text-xs text-muted-foreground">Use microphone for commands</p>
+            </div>
             <Toggle
               checked={settings.voiceEnabled}
               onChange={(checked) => updateSettings({ voiceEnabled: checked })}
@@ -684,20 +687,88 @@ export function SettingsView() {
           </div>
 
           {settings.voiceEnabled && (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm">Auto-submit</span>
+                  <p className="text-xs text-muted-foreground">Send voice commands automatically</p>
+                </div>
+                <Toggle
+                  checked={settings.voiceAutoSubmit !== false}
+                  onChange={(checked) => updateSettings({ voiceAutoSubmit: checked })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Language</label>
+                <select
+                  value={settings.voiceLanguage}
+                  onChange={(e) => updateSettings({ voiceLanguage: e.target.value })}
+                  className="input mt-1"
+                >
+                  <option value="en-US">English (US)</option>
+                  <option value="en-GB">English (UK)</option>
+                  <option value="es-ES">Spanish</option>
+                  <option value="fr-FR">French</option>
+                  <option value="de-DE">German</option>
+                  <option value="ja-JP">Japanese</option>
+                  <option value="zh-CN">Chinese (Simplified)</option>
+                  <option value="ko-KR">Korean</option>
+                  <option value="pt-BR">Portuguese (Brazil)</option>
+                  <option value="ar-SA">Arabic</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm text-muted-foreground">Language</label>
-              <select
-                value={settings.voiceLanguage}
-                onChange={(e) => updateSettings({ voiceLanguage: e.target.value })}
-                className="input mt-1"
-              >
-                <option value="en-US">English (US)</option>
-                <option value="en-GB">English (UK)</option>
-                <option value="es-ES">Spanish</option>
-                <option value="fr-FR">French</option>
-                <option value="de-DE">German</option>
-              </select>
+              <span className="text-sm">Voice Feedback</span>
+              <p className="text-xs text-muted-foreground">Read responses aloud (TTS)</p>
             </div>
+            <Toggle
+              checked={settings.voiceFeedbackEnabled}
+              onChange={(checked) => updateSettings({ voiceFeedbackEnabled: checked })}
+            />
+          </div>
+
+          {settings.voiceFeedbackEnabled && (
+            <>
+              <div>
+                <label className="text-sm text-muted-foreground">Speaking Rate</label>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground">Slow</span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={settings.voiceRate ?? 1.0}
+                    onChange={(e) => updateSettings({ voiceRate: parseFloat(e.target.value) })}
+                    className="flex-1 accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">Fast</span>
+                  <span className="text-xs font-mono w-8 text-right">{(settings.voiceRate ?? 1.0).toFixed(1)}</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Pitch</label>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground">Low</span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={settings.voicePitch ?? 1.0}
+                    onChange={(e) => updateSettings({ voicePitch: parseFloat(e.target.value) })}
+                    className="flex-1 accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">High</span>
+                  <span className="text-xs font-mono w-8 text-right">{(settings.voicePitch ?? 1.0).toFixed(1)}</span>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </section>

@@ -262,8 +262,14 @@ export async function getHistoryStats(): Promise<HistoryStats> {
   const urlCounts = new Map<string, number>();
   allEntries.forEach(e => {
     if (e.context?.url) {
-      const host = new URL(e.context.url).hostname;
-      urlCounts.set(host, (urlCounts.get(host) || 0) + 1);
+      try {
+        const host = new URL(e.context.url).hostname;
+        if (host) {
+          urlCounts.set(host, (urlCounts.get(host) || 0) + 1);
+        }
+      } catch {
+        // Skip invalid URLs (e.g., 'unknown')
+      }
     }
   });
   const mostVisitedUrls = Array.from(urlCounts.entries())

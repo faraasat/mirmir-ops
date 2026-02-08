@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Component, useEffect, useState } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { useAppStore } from './store/app-store';
 import { Header } from './components/common/Header';
 import { ModelSelectorBar } from './components/common/ModelSelectorBar';
@@ -14,6 +15,50 @@ import { WelcomeScreen, useWelcomeScreen } from './components/Welcome/WelcomeScr
 import { OnboardingOverlay } from './components/Onboarding/OnboardingOverlay';
 import { initializeThemeManager } from '@/lib/themes';
 
+// Error boundary to prevent individual view crashes from killing the whole app
+class ViewErrorBoundary extends Component<
+  { children: ReactNode; viewName: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; viewName: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(`[${this.props.viewName}] View crashed:`, error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-foreground mb-1">Something went wrong</h3>
+          <p className="text-xs text-muted-foreground mb-3 max-w-[250px]">
+            {this.state.error?.message || 'An unexpected error occurred in this view.'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory' | 'account';
 
 export function App() {
@@ -28,26 +73,43 @@ export function App() {
   }, [initializeApp]);
 
   const renderView = () => {
-    switch (currentView as ViewType) {
+    const viewName = (currentView as ViewType) || 'chat';
+    let viewComponent: ReactNode;
+    
+    switch (viewName) {
       case 'chat':
-        return <ChatView />;
+        viewComponent = <ChatView />;
+        break;
       case 'history':
-        return <HistoryView />;
+        viewComponent = <HistoryView />;
+        break;
       case 'workflows':
-        return <WorkflowsView />;
+        viewComponent = <WorkflowsView />;
+        break;
       case 'settings':
-        return <SettingsView />;
+        viewComponent = <SettingsView />;
+        break;
       case 'analytics':
-        return <AnalyticsView />;
+        viewComponent = <AnalyticsView />;
+        break;
       case 'permissions':
-        return <PermissionsView />;
+        viewComponent = <PermissionsView />;
+        break;
       case 'memory':
-        return <MemoryView />;
+        viewComponent = <MemoryView />;
+        break;
       case 'account':
-        return <AuthView />;
+        viewComponent = <AuthView />;
+        break;
       default:
-        return <ChatView />;
+        viewComponent = <ChatView />;
     }
+    
+    return (
+      <ViewErrorBoundary key={viewName} viewName={viewName}>
+        {viewComponent}
+      </ViewErrorBoundary>
+    );
   };
 
   // Show loading state while checking welcome status

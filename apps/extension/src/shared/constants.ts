@@ -156,7 +156,7 @@ export const TIMEOUTS = {
 export const PERMISSION_TIER_ACTIONS = {
   passive: ['extract', 'screenshot'],
   'read-only': ['navigate', 'scroll', 'wait', 'copy', 'select', 'hover'],
-  'mutable-safe': ['click', 'type', 'fill-form'],
+  'mutable-safe': ['click', 'type', 'fill', 'fill-form'],
   'mutable-critical': ['submit', 'download', 'paste'],
 } as const;
 

@@ -135,6 +135,7 @@ export type ActionType =
   | 'navigate'
   | 'click'
   | 'type'
+  | 'fill'
   | 'scroll'
   | 'extract'
   | 'wait'

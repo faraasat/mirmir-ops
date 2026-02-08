@@ -41,18 +41,48 @@ export function useHistory(options: UseHistoryOptions = {}): UseHistoryReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const db = getHistoryDatabase();
+  let db: ReturnType<typeof getHistoryDatabase>;
+  try {
+    db = getHistoryDatabase();
+  } catch (err) {
+    console.error('[useHistory] Failed to get database:', err);
+    return {
+      entries: [],
+      sessions: [],
+      stats: null,
+      isLoading: false,
+      error: 'Failed to initialize history database',
+      refresh: async () => {},
+      deleteEntry: async () => {},
+      deleteEntries: async () => {},
+      exportToJson: async () => '[]',
+      exportToCsv: async () => '',
+      setFilter,
+    };
+  }
 
   // Live query for sessions — auto-updates when IndexedDB changes
   const sessions = useLiveQuery(
-    () => db.sessions.orderBy('startedAt').reverse().limit(10).toArray(),
+    () => {
+      try {
+        return db.sessions.orderBy('startedAt').reverse().limit(10).toArray();
+      } catch {
+        return [];
+      }
+    },
     [],
     []
   );
 
   // Live query for entries — auto-updates when IndexedDB changes
   const liveEntries = useLiveQuery(
-    () => db.entries.orderBy('timestamp').reverse().limit(filter.limit || 100).toArray(),
+    () => {
+      try {
+        return db.entries.orderBy('timestamp').reverse().limit(filter.limit || 100).toArray();
+      } catch {
+        return [];
+      }
+    },
     [filter.limit],
     []
   );
@@ -88,8 +118,10 @@ export function useHistory(options: UseHistoryOptions = {}): UseHistoryReturn {
     try {
       const statsData = await getHistoryStats();
       setStats(statsData);
+      setError(null);
     } catch (err) {
       console.warn('[useHistory] Failed to load stats:', err);
+      setStats({ totalEntries: 0, totalSessions: 0, commandsToday: 0, actionsToday: 0, successRate: 100, mostVisitedUrls: [], mostUsedActions: [], tokenUsage: { total: 0, byProvider: {} } });
     } finally {
       setIsLoading(false);
     }

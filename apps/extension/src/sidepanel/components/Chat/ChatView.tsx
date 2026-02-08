@@ -22,12 +22,15 @@ RULES:
 3. Each step gets a "group" number. Steps with the SAME group number run in parallel. Groups run sequentially (group 1 first, then group 2, etc.).
 4. If a step needs its own browser tab (because it navigates away from the current page while another task uses the current page), set "new_tab": true.
 5. If the message is a simple single task or just conversation, return a single step.
+6. IMPORTANT: For searching ON a specific site (e.g., "search astronomia on YouTube"), use "search" type with the search_query — the system will handle it via URL. Do NOT use "fill" for search boxes.
+7. For "play X on YouTube" or "search X on YouTube", navigate to YouTube first, then use "search" to search on it — the system uses YouTube's search URL automatically.
+8. "click" should specify a short text label of the element to click (e.g., the video title, link text, button label).
 
 STEP TYPES:
-- "search": Search the web for something. Provide "search_query".
-- "navigate": Go to a URL/website. Provide "target" (the URL or site name).
-- "click": Click an element on the page. Provide "target" (what to click, e.g., search result text or button label).
-- "fill": Type into a form field. Provide "target" (the field) and "value" (what to type).
+- "search": Search for something. Provide "search_query". If already on a site (YouTube, Google, Amazon etc.), searches ON that site via URL.
+- "navigate": Go to a URL/website. Provide "target" (the URL or site name like "youtube.com" or "YouTube").
+- "click": Click an element on the page. Provide "target" (the visible text of the link/button/video to click).
+- "fill": Type into a specific form field and submit. Provide "target" (field description) and "value" (text to type). Use only when "search" won't work.
 - "extract": Extract/read data from the current page.
 - "summarize": Summarize the current page.
 - "compare": Compare items across sites. Provide "target".
@@ -41,10 +44,10 @@ Respond with ONLY a JSON object (no markdown, no explanation):
       "id": 1,
       "group": 1,
       "type": "<step_type>",
-      "description": "<short human-readable description of what this step does>",
-      "search_query": "<optional: what to search>",
-      "target": "<optional: URL, site name, element to click, etc.>",
-      "value": "<optional: value for fill actions>",
+      "description": "<short human-readable description>",
+      "search_query": "<optional>",
+      "target": "<optional>",
+      "value": "<optional>",
       "new_tab": false,
       "depends_on": []
     }
@@ -53,14 +56,14 @@ Respond with ONLY a JSON object (no markdown, no explanation):
 
 EXAMPLES:
 
-User: "Open youtube, play astronomia. Then search the top ranking universities and open the times link"
+User: "Open youtube, play astronomia song. Then search the top ranking universities and open the times link"
 {
   "steps": [
     {"id":1,"group":1,"type":"navigate","description":"Open YouTube","target":"youtube.com","new_tab":false,"depends_on":[]},
-    {"id":2,"group":1,"type":"search","description":"Search top ranking universities","search_query":"top ranking universities in the world","new_tab":true,"depends_on":[]},
-    {"id":3,"group":2,"type":"fill","description":"Search for Astronomia on YouTube","target":"search box","value":"astronomia","new_tab":false,"depends_on":[1]},
-    {"id":4,"group":3,"type":"click","description":"Click the first Astronomia video result","target":"Astronomia","new_tab":false,"depends_on":[3]},
-    {"id":5,"group":2,"type":"click","description":"Click the Times Higher Education link","target":"timeshighereducation","new_tab":true,"depends_on":[2]}
+    {"id":2,"group":1,"type":"search","description":"Search top ranking universities on Google","search_query":"top ranking universities in the world","new_tab":true,"depends_on":[]},
+    {"id":3,"group":2,"type":"search","description":"Search Astronomia on YouTube","search_query":"astronomia song","new_tab":false,"depends_on":[1]},
+    {"id":4,"group":3,"type":"click","description":"Click first Astronomia video","target":"Astronomia","new_tab":false,"depends_on":[3]},
+    {"id":5,"group":3,"type":"click","description":"Click Times Higher Education link","target":"timeshighereducation","new_tab":true,"depends_on":[2]}
   ]
 }
 
@@ -68,6 +71,14 @@ User: "find me the best pizza places in NYC"
 {
   "steps": [
     {"id":1,"group":1,"type":"search","description":"Search for best pizza places in NYC","search_query":"best pizza places in NYC","new_tab":false,"depends_on":[]}
+  ]
+}
+
+User: "search for laptops on amazon"
+{
+  "steps": [
+    {"id":1,"group":1,"type":"navigate","description":"Open Amazon","target":"amazon.com","new_tab":false,"depends_on":[]},
+    {"id":2,"group":2,"type":"search","description":"Search for laptops on Amazon","search_query":"laptops","new_tab":false,"depends_on":[1]}
   ]
 }
 
@@ -624,6 +635,37 @@ export function ChatView() {
 
 // ─── Browser Action Handlers ────────────────────────────────────────────────
 
+// Well-known site search URL patterns — much more reliable than DOM manipulation
+const SITE_SEARCH_URLS: Record<string, (query: string) => string> = {
+  'youtube.com': (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
+  'google.com': (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+  'amazon.com': (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
+  'ebay.com': (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}`,
+  'wikipedia.org': (q) => `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(q)}`,
+  'github.com': (q) => `https://github.com/search?q=${encodeURIComponent(q)}`,
+  'reddit.com': (q) => `https://www.reddit.com/search/?q=${encodeURIComponent(q)}`,
+  'twitter.com': (q) => `https://twitter.com/search?q=${encodeURIComponent(q)}`,
+  'x.com': (q) => `https://x.com/search?q=${encodeURIComponent(q)}`,
+  'bing.com': (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
+  'stackoverflow.com': (q) => `https://stackoverflow.com/search?q=${encodeURIComponent(q)}`,
+};
+
+/**
+ * Detect if a tab is on a known site, returns the site key or null
+ */
+async function detectSite(tabId: number): Promise<string | null> {
+  try {
+    const tab = await browser.tabs.get(tabId);
+    if (tab.url) {
+      const hostname = new URL(tab.url).hostname.replace('www.', '');
+      for (const site of Object.keys(SITE_SEARCH_URLS)) {
+        if (hostname.includes(site.replace('www.', ''))) return site;
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 async function handleNavigateAction(
   target: string,
   tabId: number,
@@ -634,7 +676,19 @@ async function handleNavigateAction(
     if (url.includes('.') && !url.includes(' ')) {
       url = `https://${url}`;
     } else {
-      url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+      // Could be a site name — try to resolve it
+      const siteLower = url.toLowerCase().replace(/\s+/g, '');
+      if (siteLower.includes('youtube')) url = 'https://www.youtube.com';
+      else if (siteLower.includes('google')) url = 'https://www.google.com';
+      else if (siteLower.includes('amazon')) url = 'https://www.amazon.com';
+      else if (siteLower.includes('github')) url = 'https://github.com';
+      else if (siteLower.includes('reddit')) url = 'https://www.reddit.com';
+      else if (siteLower.includes('twitter') || siteLower === 'x') url = 'https://x.com';
+      else if (siteLower.includes('facebook')) url = 'https://www.facebook.com';
+      else if (siteLower.includes('instagram')) url = 'https://www.instagram.com';
+      else if (siteLower.includes('linkedin')) url = 'https://www.linkedin.com';
+      else if (siteLower.includes('wikipedia')) url = 'https://en.wikipedia.org';
+      else url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
     }
   }
 
@@ -651,7 +705,15 @@ async function handleSearchAction(
   searchQuery: string,
   tabId: number,
 ): Promise<string> {
-  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+  // Check if the tab is on a known site — use that site's search URL
+  const currentSite = await detectSite(tabId);
+  let searchUrl: string;
+  
+  if (currentSite && SITE_SEARCH_URLS[currentSite]) {
+    searchUrl = SITE_SEARCH_URLS[currentSite](searchQuery);
+  } else {
+    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+  }
 
   try {
     await browser.tabs.update(tabId, { url: searchUrl });
@@ -666,11 +728,11 @@ async function handleSearchAction(
       });
 
       if (extractResult?.success && extractResult.data) {
-        return `Searched Google for: "${searchQuery}"\n\nExtracted data:\n${JSON.stringify(extractResult.data, null, 2).slice(0, 3000)}`;
+        return `Searched for: "${searchQuery}" on ${currentSite || 'Google'}\n\nExtracted data:\n${JSON.stringify(extractResult.data, null, 2).slice(0, 3000)}`;
       }
     } catch { /* extraction failed, that's ok */ }
 
-    return `Searched Google for: "${searchQuery}"\nResults are now displayed in the browser tab.`;
+    return `Searched for: "${searchQuery}" on ${currentSite || 'Google'}\nResults are now displayed in the browser tab.`;
   } catch (error) {
     return `Failed to search: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
@@ -702,22 +764,24 @@ async function handleClickAction(
   target: string,
   tabId: number,
 ): Promise<string> {
+  // First, try content script click with smart element finding
   try {
     const result = await browser.runtime.sendMessage({
       type: 'EXECUTE_ACTION',
       payload: {
         id: `action_${Date.now()}`,
         type: 'click',
-        selector: target,
+        target: target,
         value: target,
-        permissionTier: 2,
+        permissionTier: 'mutable-safe' as const,
       },
       tabId,
       timestamp: Date.now(),
     });
 
     if (result?.success) {
-      return `Clicked on "${target}" successfully.`;
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return `Clicked on "${target}" successfully. ${result.data?.text ? `Element text: "${result.data.text}"` : ''}`;
     }
     return `Could not click on "${target}": ${result?.error || 'Element not found'}`;
   } catch (error) {
@@ -730,15 +794,28 @@ async function handleFillAction(
   value: string,
   tabId: number,
 ): Promise<string> {
+  // For known sites, prefer URL-based search which is much more reliable
+  const site = await detectSite(tabId);
+  if (site && SITE_SEARCH_URLS[site] && /search|query|find/i.test(target)) {
+    const searchUrl = SITE_SEARCH_URLS[site](value);
+    try {
+      await browser.tabs.update(tabId, { url: searchUrl });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return `Searched for "${value}" on ${site} using URL navigation.`;
+    } catch { /* fall through to DOM approach */ }
+  }
+
+  // Fall back to DOM-based fill via content script
   try {
     const result = await browser.runtime.sendMessage({
       type: 'EXECUTE_ACTION',
       payload: {
         id: `action_${Date.now()}`,
         type: 'fill',
-        selector: target,
+        target: target,
         value: value || target,
-        permissionTier: 2,
+        options: { submit: true },
+        permissionTier: 'mutable-safe' as const,
       },
       tabId,
       timestamp: Date.now(),
@@ -747,7 +824,12 @@ async function handleFillAction(
     if (result?.success) {
       return `Filled "${target}" with "${value}" successfully.`;
     }
-    return `Could not fill the form: ${result?.error || 'Unknown error'}`;
+    
+    // If fill failed, try URL-based search as last resort
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(value + ' ' + target)}`;
+    await browser.tabs.update(tabId, { url: searchUrl });
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    return `Could not fill the form directly, searched Google for "${value}" instead.`;
   } catch (error) {
     return `Form fill failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
