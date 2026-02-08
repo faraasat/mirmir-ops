@@ -14,6 +14,7 @@ import { initializeStorage } from './storage';
 import { initializePermissions } from './permissions';
 import { initializeUsageTracker } from './usage-tracker';
 import { initializeTabManager, updateTabState, cleanupStaleTabs } from './tab-manager';
+import { initializeShadowTabManager } from './shadow-tab-manager';
 import { initializeHistoryCleanup, runHistoryCleanup } from '@/lib/history';
 import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';
 
@@ -140,6 +141,7 @@ async function initialize() {
   await initializePermissions();
   initializeUsageTracker();
   initializeTabManager();
+  initializeShadowTabManager();
   await initializeHistoryCleanup();
   await initializeScheduler();
   

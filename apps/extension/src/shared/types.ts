@@ -250,7 +250,14 @@ export type MessageType =
   | 'CHECK_PERMISSION'
   | 'REQUEST_PERMISSION'
   | 'SYNC_USAGE'
-  | 'GET_LIMITS';
+  | 'GET_LIMITS'
+  // Cross-site orchestration
+  | 'CREATE_SHADOW_TAB'
+  | 'CLOSE_SHADOW_TAB'
+  | 'GET_SHADOW_TABS'
+  | 'EXECUTE_CROSS_SITE_TASK'
+  | 'COMPARE_PRICES'
+  | 'SCRAPE_SITES';
 
 export interface Message<T = unknown> {
   type: MessageType;

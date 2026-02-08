@@ -5,6 +5,20 @@ import { trackUsage, getUsageStats, checkLimit } from './usage-tracker';
 import { saveHistoryEntry, getHistory } from './history-manager';
 import { executeAction } from './action-executor';
 import { processVoiceCommand, type VoiceCommandResult } from './voice-handler';
+import { 
+  createShadowTab, 
+  closeShadowTab, 
+  getAllShadowTabs, 
+  getActiveShadowTabCount,
+  type ShadowTabOptions,
+} from './shadow-tab-manager';
+import { 
+  CrossSiteExecutor, 
+  comparePrices, 
+  scrapeMultipleSites,
+  type CrossSiteTask,
+  type TaskResult,
+} from '@/lib/orchestration';
 
 export async function handleMessage(
   message: Message<unknown>,
@@ -49,6 +63,25 @@ export async function handleMessage(
 
       case 'GET_LIMITS':
         return await handleGetLimits();
+
+      // Cross-site orchestration messages
+      case 'CREATE_SHADOW_TAB':
+        return await handleCreateShadowTab(payload as ShadowTabOptions);
+
+      case 'CLOSE_SHADOW_TAB':
+        return await handleCloseShadowTab(payload as { tabId: number });
+
+      case 'GET_SHADOW_TABS':
+        return handleGetShadowTabs();
+
+      case 'EXECUTE_CROSS_SITE_TASK':
+        return await handleExecuteCrossSiteTask(payload as CrossSiteTask);
+
+      case 'COMPARE_PRICES':
+        return await handleComparePrices(payload as { productName: string; urls: string[] });
+
+      case 'SCRAPE_SITES':
+        return await handleScrapeSites(payload as { urls: string[]; selector?: string });
 
       default:
         return { success: false, error: `Unknown message type: ${type}` };
@@ -226,4 +259,113 @@ async function handleSyncUsage(): Promise<MessageResponse<void>> {
 async function handleGetLimits(): Promise<MessageResponse<unknown>> {
   const stats = await getUsageStats();
   return { success: true, data: stats };
+}
+
+// Cross-site orchestration handlers
+
+async function handleCreateShadowTab(
+  options: ShadowTabOptions
+): Promise<MessageResponse<unknown>> {
+  try {
+    const shadowTab = await createShadowTab(options);
+    return { success: true, data: shadowTab };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create shadow tab' 
+    };
+  }
+}
+
+async function handleCloseShadowTab(
+  payload: { tabId: number }
+): Promise<MessageResponse<void>> {
+  try {
+    await closeShadowTab(payload.tabId);
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to close shadow tab' 
+    };
+  }
+}
+
+function handleGetShadowTabs(): MessageResponse<unknown> {
+  return { 
+    success: true, 
+    data: {
+      tabs: getAllShadowTabs(),
+      count: getActiveShadowTabCount(),
+    }
+  };
+}
+
+async function handleExecuteCrossSiteTask(
+  task: CrossSiteTask
+): Promise<MessageResponse<TaskResult>> {
+  try {
+    // Check shadow tab limit before starting
+    const withinLimits = await checkLimit('shadowTab');
+    if (!withinLimits) {
+      return { 
+        success: false, 
+        error: 'Shadow tab limit reached. Please upgrade your plan.' 
+      };
+    }
+
+    const executor = new CrossSiteExecutor(task.id);
+    const result = await executor.execute(task);
+    
+    return { success: result.success, data: result };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Cross-site task failed' 
+    };
+  }
+}
+
+async function handleComparePrices(
+  payload: { productName: string; urls: string[] }
+): Promise<MessageResponse<TaskResult>> {
+  try {
+    const withinLimits = await checkLimit('shadowTab');
+    if (!withinLimits) {
+      return { 
+        success: false, 
+        error: 'Shadow tab limit reached. Please upgrade your plan.' 
+      };
+    }
+
+    const result = await comparePrices(payload.productName, payload.urls);
+    return { success: result.success, data: result };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Price comparison failed' 
+    };
+  }
+}
+
+async function handleScrapeSites(
+  payload: { urls: string[]; selector?: string }
+): Promise<MessageResponse<TaskResult>> {
+  try {
+    const withinLimits = await checkLimit('shadowTab');
+    if (!withinLimits) {
+      return { 
+        success: false, 
+        error: 'Shadow tab limit reached. Please upgrade your plan.' 
+      };
+    }
+
+    const result = await scrapeMultipleSites(payload.urls, payload.selector);
+    return { success: result.success, data: result };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Site scraping failed' 
+    };
+  }
 }

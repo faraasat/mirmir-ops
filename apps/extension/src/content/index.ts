@@ -64,23 +64,32 @@ async function handleExecuteAction(action: Action): Promise<MessageResponse<unkn
 }
 
 async function handleExtractData(
-  payload: { selector?: string; type?: string }
+  payload: { selector?: string; type?: string; extractType?: string }
 ): Promise<MessageResponse<unknown>> {
   try {
     let data;
+    const extractType = payload.extractType || payload.type;
     
     if (payload.selector) {
       data = extractor.extractBySelector(payload.selector);
-    } else if (payload.type === 'forms') {
+    } else if (extractType === 'forms') {
       data = extractor.extractForms();
-    } else if (payload.type === 'links') {
+    } else if (extractType === 'links') {
       data = extractor.extractLinks();
-    } else if (payload.type === 'images') {
+    } else if (extractType === 'images') {
       data = extractor.extractImages();
-    } else if (payload.type === 'tables') {
+    } else if (extractType === 'tables') {
       data = extractor.extractTables();
+    } else if (extractType === 'structured') {
+      data = extractor.extractStructuredData();
+    } else if (extractType === 'product') {
+      data = extractor.extractProductData();
+    } else if (extractType === 'article') {
+      data = extractor.extractArticleData();
+    } else if (extractType === 'all') {
+      data = extractor.extractAllData();
     } else {
-      // Extract page summary
+      // Extract page summary as default
       data = extractor.extractPageSummary();
     }
     

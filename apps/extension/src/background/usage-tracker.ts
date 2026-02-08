@@ -15,7 +15,7 @@ export function initializeUsageTracker(): void {
 }
 
 export async function trackUsage(
-  category: 'llm' | 'voice' | 'action' | 'byok',
+  category: 'llm' | 'voice' | 'action' | 'byok' | 'shadowTab',
   detail: string
 ): Promise<void> {
   switch (category) {
@@ -28,6 +28,9 @@ export async function trackUsage(
     case 'byok':
       await incrementUsage('byokRequests');
       break;
+    case 'shadowTab':
+      await incrementUsage('activeShadowTabs');
+      break;
     // Actions don't have a counter, they're just logged
   }
 
@@ -35,7 +38,7 @@ export async function trackUsage(
 }
 
 export async function checkLimit(
-  category: 'llm' | 'voice' | 'action' | 'byok' | 'shadowTabs' | 'workflows' | 'memory'
+  category: 'llm' | 'voice' | 'action' | 'byok' | 'shadowTab' | 'shadowTabs' | 'workflows' | 'memory'
 ): Promise<boolean> {
   const usage = await getUsage();
   const limits = await getCurrentPlanLimits();
@@ -47,6 +50,7 @@ export async function checkLimit(
       return limits.voiceCommands === -1 || usage.voiceCommands < limits.voiceCommands;
     case 'byok':
       return limits.byokRequests === -1 || usage.byokRequests < limits.byokRequests;
+    case 'shadowTab':
     case 'shadowTabs':
       return limits.shadowTabs === -1 || usage.activeShadowTabs < limits.shadowTabs;
     case 'workflows':

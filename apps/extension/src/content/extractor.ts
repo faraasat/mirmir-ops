@@ -1,4 +1,12 @@
 // DOM Extractor - Extract structured data from web pages
+import { 
+  parseAllStructuredData, 
+  extractProductData, 
+  extractArticleData,
+  type StructuredData,
+  type ProductData,
+  type ArticleData,
+} from '@/lib/data-extraction';
 
 export interface PageContext {
   url: string;
@@ -296,6 +304,48 @@ export class DOMExtractor {
       formCount: document.querySelectorAll('form').length,
       linkCount: document.querySelectorAll('a[href]').length,
       imageCount: document.querySelectorAll('img[src]').length,
+    };
+  }
+
+  /**
+   * Extract structured data (JSON-LD, Microdata, Open Graph)
+   */
+  extractStructuredData(): StructuredData[] {
+    return parseAllStructuredData(document);
+  }
+
+  /**
+   * Extract product data from the page
+   */
+  extractProductData(): ProductData | null {
+    return extractProductData(document);
+  }
+
+  /**
+   * Extract article data from the page
+   */
+  extractArticleData(): ArticleData | null {
+    return extractArticleData(document);
+  }
+
+  /**
+   * Extract all available data from the page
+   */
+  extractAllData(): {
+    context: PageContext;
+    summary: ReturnType<DOMExtractor['extractPageSummary']>;
+    structuredData: StructuredData[];
+    tables: TableData[];
+    product: ProductData | null;
+    article: ArticleData | null;
+  } {
+    return {
+      context: this.getPageContext(),
+      summary: this.extractPageSummary(),
+      structuredData: this.extractStructuredData(),
+      tables: this.extractTables(),
+      product: this.extractProductData(),
+      article: this.extractArticleData(),
     };
   }
 }
