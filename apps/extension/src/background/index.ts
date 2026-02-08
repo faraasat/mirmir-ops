@@ -13,7 +13,10 @@ const sidePanel = (browser as unknown as { sidePanel?: SidePanelAPI }).sidePanel
 import { initializeStorage } from './storage';
 import { initializePermissions } from './permissions';
 import { initializeUsageTracker } from './usage-tracker';
-import { initializeTabManager, updateTabState, cleanupStaleTabs } from './tab-manager';
+import { initializeTabManager, updateTabState, cleanupStaleTabs, markExtensionNavigation, markExtensionAction } from './tab-manager';
+
+// Re-export for use in other modules
+export { markExtensionNavigation, markExtensionAction };
 import { initializeShadowTabManager } from './shadow-tab-manager';
 import { initializeHistoryCleanup, runHistoryCleanup } from '@/lib/history';
 import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';

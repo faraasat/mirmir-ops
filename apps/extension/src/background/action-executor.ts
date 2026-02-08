@@ -1,10 +1,20 @@
 import browser from 'webextension-polyfill';
 import type { Action, ActionResult } from '@/shared/types';
+import { markExtensionNavigation, markExtensionAction } from './tab-manager';
 
 export async function executeAction(action: Action, tabId: number): Promise<ActionResult> {
   const startTime = Date.now();
   
   try {
+    // Mark extension activity for history tracking
+    // Navigation actions need special handling to ensure they get logged
+    if (action.type === 'navigate') {
+      markExtensionNavigation(tabId, action.value as string);
+    } else {
+      // For non-navigation actions, just mark that extension is active
+      markExtensionAction(tabId);
+    }
+    
     // Send action to content script for execution
     const response = await browser.tabs.sendMessage(tabId, {
       type: 'EXECUTE_ACTION',

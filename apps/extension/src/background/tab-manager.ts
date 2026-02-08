@@ -11,11 +11,19 @@ export interface TabState {
   lastActiveAt: number;
   isActive: boolean;
   pageLoadCount: number;
+  lastExtensionAction?: number; // Timestamp of last extension-initiated action
 }
 
 // Store tab states in memory
 const tabStates = new Map<number, TabState>();
 let activeTabId: number | null = null;
+
+// Track pending extension-initiated navigations
+// When the extension triggers a navigation, we add the expected URL here
+const pendingExtensionNavigations = new Map<number, { url: string; timestamp: number }>();
+
+// Time window (ms) to consider a navigation as extension-initiated
+const EXTENSION_ACTION_WINDOW = 5000; // 5 seconds
 
 /**
  * Initialize tab manager and set up listeners
@@ -93,8 +101,12 @@ function handleTabRemoved(tabId: number, _removeInfo: browser.Tabs.OnRemovedRemo
   const state = tabStates.get(tabId);
   
   if (state) {
-    // Log final navigation for history
-    if (state.url && !isInternalUrl(state.url)) {
+    // Only log navigation if this tab had recent extension activity
+    // This prevents logging every closed tab
+    const hasRecentExtensionActivity = state.lastExtensionAction && 
+      (Date.now() - state.lastExtensionAction) < EXTENSION_ACTION_WINDOW * 2;
+    
+    if (state.url && !isInternalUrl(state.url) && hasRecentExtensionActivity) {
       // Don't await, fire and forget
       logNavigation({
         url: state.url,
@@ -103,8 +115,9 @@ function handleTabRemoved(tabId: number, _removeInfo: browser.Tabs.OnRemovedRemo
       }).catch(() => {});
     }
     
-    // Clean up tab state
+    // Clean up tab state and pending navigations
     tabStates.delete(tabId);
+    pendingExtensionNavigations.delete(tabId);
     
     // Update active tab if this was the active one
     if (activeTabId === tabId) {
@@ -176,36 +189,88 @@ function handleTabReplaced(addedTabId: number, removedTabId: number): void {
 
 /**
  * Update tab state when page loads/navigates
+ * Only logs to history if the navigation was triggered by the extension
  */
 export function updateTabState(tabId: number, url: string, title: string): void {
   const state = tabStates.get(tabId);
+  const now = Date.now();
   
   if (state) {
     const isNewPage = state.url !== url;
     
     state.url = url;
     state.title = title;
-    state.lastActiveAt = Date.now();
+    state.lastActiveAt = now;
     
     if (isNewPage) {
       state.pageLoadCount++;
       
-      // Log navigation for history (non-internal URLs only)
-      if (!isInternalUrl(url)) {
+      // Only log navigation if it was initiated by the extension
+      // Check if there's a pending extension navigation for this tab
+      const pendingNav = pendingExtensionNavigations.get(tabId);
+      const wasExtensionInitiated = pendingNav && 
+        (now - pendingNav.timestamp) < EXTENSION_ACTION_WINDOW;
+      
+      // Also check if the tab had recent extension activity
+      const hasRecentExtensionActivity = state.lastExtensionAction && 
+        (now - state.lastExtensionAction) < EXTENSION_ACTION_WINDOW;
+      
+      if (!isInternalUrl(url) && (wasExtensionInitiated || hasRecentExtensionActivity)) {
         logNavigation({ url, title, tabId }).catch(() => {});
+        console.log(`[TabManager] Logged extension-initiated navigation: ${url}`);
+      }
+      
+      // Clear pending navigation after processing
+      if (pendingNav) {
+        pendingExtensionNavigations.delete(tabId);
       }
     }
   } else {
-    // Tab not tracked yet, add it
+    // Tab not tracked yet, add it (don't log - not extension initiated)
     tabStates.set(tabId, {
       id: tabId,
       url,
       title,
-      createdAt: Date.now(),
-      lastActiveAt: Date.now(),
+      createdAt: now,
+      lastActiveAt: now,
       isActive: tabId === activeTabId,
       pageLoadCount: 1,
     });
+  }
+}
+
+/**
+ * Mark that the extension is about to perform a navigation action on a tab
+ * Call this BEFORE triggering a navigation to ensure it gets logged
+ */
+export function markExtensionNavigation(tabId: number, expectedUrl?: string): void {
+  const now = Date.now();
+  
+  // Mark the tab as having recent extension activity
+  const state = tabStates.get(tabId);
+  if (state) {
+    state.lastExtensionAction = now;
+  }
+  
+  // If we know the expected URL, track it
+  if (expectedUrl) {
+    pendingExtensionNavigations.set(tabId, {
+      url: expectedUrl,
+      timestamp: now,
+    });
+  }
+  
+  console.log(`[TabManager] Marked extension navigation for tab ${tabId}`);
+}
+
+/**
+ * Mark that the extension performed an action on a tab (non-navigation)
+ * This helps track extension activity for context
+ */
+export function markExtensionAction(tabId: number): void {
+  const state = tabStates.get(tabId);
+  if (state) {
+    state.lastExtensionAction = Date.now();
   }
 }
 
