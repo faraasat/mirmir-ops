@@ -58,12 +58,12 @@ export default function AnalyticsPage() {
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Analytics</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h2>
         <div className="flex gap-4">
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
             <option value="day">Daily</option>
             <option value="week">Weekly</option>
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
       </div>
 
       {hasError && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-700 dark:text-yellow-400">
           <p className="font-medium">API not connected</p>
           <p className="text-sm">Showing sample data for demonstration.</p>
         </div>
@@ -146,20 +146,20 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-        <h3 className="font-semibold mb-4">Revenue Over Time</h3>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 mb-8">
+        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">Revenue Over Time</h3>
         {revenueLoading ? (
-          <div className="h-64 bg-gray-100 animate-pulse rounded" />
+          <div className="h-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded" />
         ) : (
           <BarChart data={displayRevenue.revenue} color="green" prefix="$" />
         )}
       </div>
 
       {/* Subscription Changes */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="font-semibold mb-4">Subscription Changes</h3>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">Subscription Changes</h3>
         {revenueLoading ? (
-          <div className="h-64 bg-gray-100 animate-pulse rounded" />
+          <div className="h-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded" />
         ) : (
           <SubscriptionChart data={displayRevenue.subscriptions} />
         )}
@@ -183,19 +183,19 @@ function SummaryCard({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2" />
-        <div className="h-8 bg-gray-200 rounded w-3/4 mb-2" />
-        <div className="h-3 bg-gray-200 rounded w-1/4" />
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 animate-pulse">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2" />
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-      <p className={`text-sm mt-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+      <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{value}</p>
+      <p className={`text-sm mt-1 ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
         {change} vs previous period
       </p>
     </div>
@@ -215,16 +215,16 @@ function ChartCard({
 }) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
-        <div className="h-48 bg-gray-100 animate-pulse rounded" />
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4" />
+        <div className="h-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="font-semibold mb-4">{title}</h3>
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+      <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{title}</h3>
       <LineChart data={data} color={color} />
     </div>
   );
@@ -245,10 +245,10 @@ function LineChart({
   };
 
   const bgColors = {
-    blue: 'fill-blue-100',
-    purple: 'fill-purple-100',
-    green: 'fill-green-100',
-    orange: 'fill-orange-100',
+    blue: 'fill-blue-100 dark:fill-blue-900/30',
+    purple: 'fill-purple-100 dark:fill-purple-900/30',
+    green: 'fill-green-100 dark:fill-green-900/30',
+    orange: 'fill-orange-100 dark:fill-orange-900/30',
   };
 
   const maxValue = Math.max(...data.map((d) => d.count), 1);
@@ -291,7 +291,7 @@ function LineChart({
           );
         })}
       </svg>
-      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 mt-2">
+      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
         <span>{data[0]?.date.split('-').slice(1).join('/')}</span>
         <span>{data[data.length - 1]?.date.split('-').slice(1).join('/')}</span>
       </div>
@@ -330,7 +330,7 @@ function BarChart({
             style={{ height: `${(d.amount / maxValue) * 100}%` }}
           />
           {data.length <= 12 && (
-            <span className="text-xs text-gray-500">{d.date.split('-').slice(1).join('/')}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{d.date.split('-').slice(1).join('/')}</span>
           )}
         </div>
       ))}
@@ -343,7 +343,7 @@ function SubscriptionChart({ data }: { data: { date: string; new: number; churne
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4 text-sm">
+      <div className="flex gap-4 text-sm text-gray-700 dark:text-gray-300">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-green-500" />
           <span>New subscriptions</span>
@@ -367,7 +367,7 @@ function SubscriptionChart({ data }: { data: { date: string; new: number; churne
               />
             </div>
             {data.length <= 12 && (
-              <span className="text-xs text-gray-500">{d.date.split('-').slice(1).join('/')}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{d.date.split('-').slice(1).join('/')}</span>
             )}
           </div>
         ))}

@@ -32,7 +32,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <h2 className="text-2xl font-bold mb-6">Users</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Users</h2>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6">
@@ -42,13 +42,13 @@ export default function UsersPage() {
             placeholder="Search by email or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           />
         </div>
         <select
           value={planFilter}
           onChange={(e) => setPlanFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         >
           <option value="">All Plans</option>
           <option value="free">Free</option>
@@ -59,81 +59,81 @@ export default function UsersPage() {
 
       {/* Error state */}
       {error && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-700 dark:text-yellow-400">
           <p className="font-medium">Unable to load users</p>
           <p className="text-sm">Make sure the API server is running.</p>
         </div>
       )}
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Plan
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Usage
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Joined
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <tr key={i} className="animate-pulse">
                   <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-48" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48" />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-20" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-32" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-24" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-16 ml-auto" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
                   </td>
                 </tr>
               ))
             ) : users.length > 0 ? (
               users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-600 font-medium">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">
                           {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{user.name || 'No name'}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{user.name || 'No name'}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <PlanBadge plan={user.plan} />
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     <div className="space-y-1">
                       <p>LLM: {user.usage?.cloudLlmRequests || 0}</p>
                       <p>Voice: {user.usage?.voiceCommands || 0}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -142,7 +142,7 @@ export default function UsersPage() {
                         setSelectedUser(user);
                         setShowModal(true);
                       }}
-                      className="text-primary-600 hover:text-primary-800 font-medium text-sm"
+                      className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm"
                     >
                       Edit
                     </button>
@@ -151,7 +151,7 @@ export default function UsersPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                   No users found
                 </td>
               </tr>
@@ -161,21 +161,21 @@ export default function UsersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Page {page} of {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
@@ -186,23 +186,23 @@ export default function UsersPage() {
       {/* Edit Modal */}
       {showModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Edit User</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Edit User</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <p className="text-gray-900">{selectedUser.email}</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <p className="text-gray-900 dark:text-white">{selectedUser.email}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Plan</label>
                 <select
                   value={selectedUser.plan}
                   onChange={(e) =>
                     setSelectedUser({ ...selectedUser, plan: e.target.value as User['plan'] })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="free">Free</option>
                   <option value="pro">Pro</option>
@@ -214,7 +214,7 @@ export default function UsersPage() {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
               >
                 Cancel
               </button>
@@ -240,9 +240,9 @@ export default function UsersPage() {
 
 function PlanBadge({ plan }: { plan: string }) {
   const styles = {
-    free: 'bg-gray-100 text-gray-700',
-    pro: 'bg-blue-100 text-blue-700',
-    enterprise: 'bg-purple-100 text-purple-700',
+    free: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+    pro: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+    enterprise: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
   };
 
   return (

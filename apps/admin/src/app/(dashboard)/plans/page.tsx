@@ -105,32 +105,32 @@ export default function PlansPage() {
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Subscription Plans</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Subscription Plans</h2>
         <button
           onClick={() => setShowLimitsEditor(!showLimitsEditor)}
-          className="px-4 py-2 text-sm font-medium text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
+          className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-600 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20"
         >
           {showLimitsEditor ? 'Hide Limits' : 'Show Limits'}
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-700 dark:text-yellow-400">
           <p className="font-medium">API not connected</p>
           <p className="text-sm">Showing default plan configuration.</p>
         </div>
       )}
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {isLoading
           ? [...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-1/2 mb-4" />
-                <div className="h-10 bg-gray-200 rounded w-3/4 mb-6" />
+              <div key={i} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4" />
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-6" />
                 <div className="space-y-2">
                   {[...Array(5)].map((_, j) => (
-                    <div key={j} className="h-4 bg-gray-200 rounded" />
+                    <div key={j} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
                   ))}
                 </div>
               </div>
@@ -147,27 +147,27 @@ export default function PlansPage() {
 
       {/* Limit Comparison Table */}
       {showLimitsEditor && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="font-semibold">Limits Comparison</h3>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-900 dark:text-white">Limits Comparison</h3>
           </div>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Feature
                 </th>
                 {displayPlans.map((plan) => (
                   <th
                     key={plan.id}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
                   >
                     {plan.name}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {[
                 { key: 'cloudLlmRequests', label: 'Cloud LLM Requests' },
                 { key: 'voiceCommands', label: 'Voice Commands/day' },
@@ -176,14 +176,14 @@ export default function PlansPage() {
                 { key: 'shadowTabs', label: 'Shadow Tabs' },
                 { key: 'memory', label: 'Memory Entries' },
               ].map((item) => (
-                <tr key={item.key}>
-                  <td className="px-6 py-4 text-sm text-gray-900">{item.label}</td>
+                <tr key={item.key} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{item.label}</td>
                   {displayPlans.map((plan) => (
-                    <td key={plan.id} className="px-6 py-4 text-sm text-center">
+                    <td key={plan.id} className="px-6 py-4 text-sm text-center text-gray-700 dark:text-gray-300">
                       {plan.limits[item.key] === -1 ? (
-                        <span className="text-green-600 font-medium">Unlimited</span>
+                        <span className="text-green-600 dark:text-green-400 font-medium">Unlimited</span>
                       ) : (
-                        <span>{plan.limits[item.key].toLocaleString()}</span>
+                        <span>{plan.limits[item.key]?.toLocaleString()}</span>
                       )}
                     </td>
                   ))}
@@ -223,12 +223,12 @@ function PlanCard({
 
   return (
     <div
-      className={`bg-white rounded-lg border-2 p-6 ${
+      className={`bg-white dark:bg-gray-900 rounded-lg border-2 p-6 ${
         isPro
-          ? 'border-primary-500 ring-2 ring-primary-100'
+          ? 'border-primary-500 ring-2 ring-primary-100 dark:ring-primary-900/30'
           : isEnterprise
           ? 'border-purple-500'
-          : 'border-gray-200'
+          : 'border-gray-200 dark:border-gray-700'
       }`}
     >
       {isPro && (
@@ -237,17 +237,17 @@ function PlanCard({
         </span>
       )}
 
-      <h3 className="text-xl font-bold">{plan.name}</h3>
+      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{plan.name}</h3>
       <div className="mt-2 mb-6">
-        <span className="text-3xl font-bold">
+        <span className="text-3xl font-bold text-gray-900 dark:text-white">
           ${plan.price.toFixed(2)}
         </span>
-        <span className="text-gray-500">/{plan.billingCycle}</span>
+        <span className="text-gray-500 dark:text-gray-400">/{plan.billingCycle}</span>
       </div>
 
       <ul className="space-y-3 mb-6">
         {plan.features.map((feature, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm">
+          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
             <svg
               className={`w-5 h-5 flex-shrink-0 ${
                 isPro ? 'text-primary-500' : isEnterprise ? 'text-purple-500' : 'text-green-500'
@@ -264,13 +264,13 @@ function PlanCard({
       </ul>
 
       {showLimits && (
-        <div className="pt-4 border-t border-gray-200 mb-4">
-          <p className="text-xs font-medium text-gray-500 mb-2">LIMITS</p>
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mb-4">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">LIMITS</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {Object.entries(plan.limits).map(([key, value]) => (
               <div key={key} className="flex justify-between">
-                <span className="text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                <span className="font-medium">{value === -1 ? '∞' : value}</span>
+                <span className="text-gray-500 dark:text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                <span className="font-medium text-gray-900 dark:text-white">{value === -1 ? '∞' : value}</span>
               </div>
             ))}
           </div>
@@ -284,7 +284,7 @@ function PlanCard({
             ? 'bg-primary-600 text-white hover:bg-primary-700'
             : isEnterprise
             ? 'bg-purple-600 text-white hover:bg-purple-700'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
         }`}
       >
         Edit Plan
@@ -339,13 +339,13 @@ function PlanEditModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto py-8">
-      <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4">
-        <h3 className="text-lg font-semibold mb-4">Edit {plan.name} Plan</h3>
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-2xl mx-4">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Edit {plan.name} Plan</h3>
 
         <div className="space-y-6 max-h-[60vh] overflow-y-auto">
           {/* Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Price (USD)
             </label>
             <input
@@ -353,7 +353,7 @@ function PlanEditModal({
               step="0.01"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
 
@@ -364,29 +364,29 @@ function PlanEditModal({
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300"
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
             />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Plan is active (visible to users)
             </label>
           </div>
 
           {/* Limits */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Limits (-1 for unlimited)
             </label>
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(formData.limits).map(([key, value]) => (
                 <div key={key}>
-                  <label className="block text-xs text-gray-500 mb-1 capitalize">
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 capitalize">
                     {key.replace(/([A-Z])/g, ' $1')}
                   </label>
                   <input
                     type="number"
                     value={value}
                     onChange={(e) => handleLimitChange(key, e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
                 </div>
               ))}
@@ -395,7 +395,7 @@ function PlanEditModal({
 
           {/* Features */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Features</label>
             <div className="space-y-2 mb-3">
               {formData.features.map((feature, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -407,11 +407,11 @@ function PlanEditModal({
                       newFeatures[index] = e.target.value;
                       setFormData({ ...formData, features: newFeatures });
                     }}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
                   <button
                     onClick={() => removeFeature(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -426,12 +426,12 @@ function PlanEditModal({
                 value={newFeature}
                 onChange={(e) => setNewFeature(e.target.value)}
                 placeholder="Add new feature..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 onKeyDown={(e) => e.key === 'Enter' && addFeature()}
               />
               <button
                 onClick={addFeature}
-                className="px-4 py-2 text-sm font-medium text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
+                className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-600 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20"
               >
                 Add
               </button>
@@ -439,10 +439,10 @@ function PlanEditModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
           >
             Cancel
           </button>

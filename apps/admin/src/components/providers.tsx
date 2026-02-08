@@ -4,6 +4,7 @@ import { SessionProvider, useSession } from 'next-auth/react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { adminApi } from '@/lib/api';
+import { ThemeProvider } from './theme-provider';
 
 // Component to sync session token with API client
 function ApiTokenSync({ children }: { children: React.ReactNode }) {
@@ -51,7 +52,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <ApiTokenSync>{children}</ApiTokenSync>
+        <ThemeProvider>
+          <ApiTokenSync>{children}</ApiTokenSync>
+        </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>
   );

@@ -2,39 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 250, 250, 250;
-  --background-end-rgb: 255, 255, 255;
+@layer base {
+  :root {
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 250, 250, 250;
+    --background-end-rgb: 255, 255, 255;
+  }
+
+  .dark {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 31, 41, 55;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgb(var(--background-end-rgb))
-  )
-  rgb(var(--background-start-rgb));
-}
-
-/* Ensure form elements have proper text colors */
+/* Ensure form elements have proper text colors in both themes */
 input,
 textarea,
 select {
-  color: #111827; /* gray-900 */
-  background-color: #ffffff;
+  @apply text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af; /* gray-400 */
+  @apply text-gray-400 dark:text-gray-500;
 }
 
 /* Focus styles */
 input:focus,
 textarea:focus,
 select:focus {
-  color: #111827;
-  background-color: #ffffff;
+  @apply text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-800 ring-primary-500;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded-full;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
 }
