@@ -42,6 +42,7 @@ const authOptions = {
             email: data.user.email,
             name: data.user.name,
             role: data.user.role,
+            accessToken: data.token, // Store the backend JWT token
           };
         } catch (error) {
           console.error('Admin auth error:', error);
@@ -61,6 +62,7 @@ const authOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.accessToken = user.accessToken; // Store backend JWT in NextAuth JWT
       }
       return token;
     },
@@ -70,6 +72,8 @@ const authOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
       }
+      // Pass the backend token to the session for API calls
+      session.accessToken = token.accessToken;
       return session;
     },
   },

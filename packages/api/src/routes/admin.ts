@@ -19,7 +19,7 @@ interface AdminUser {
 const ADMIN_USERS: AdminUser[] = [
   {
     email: 'admin@mirmir.com',
-    password: '$2a$10$CwTycUXWue0Thq9StjUM0uG5zU5.Q.0Pq5F3zLjCOVBb3Bx3HO1Oi', // 'admin123'
+    password: '$2a$10$XJU92MOcA0DwuhUDCxMGFukDKocl5ixexyq9bn9UCx85ER8UZk0F.', // 'admin123'
     name: 'Admin User',
     role: 'super_admin',
   },
