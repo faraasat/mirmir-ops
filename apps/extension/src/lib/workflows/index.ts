@@ -20,3 +20,15 @@ export {
   duplicateWorkflow,
 } from './storage';
 export { WorkflowExecutor, getWorkflowExecutor, type ExecutorCallbacks } from './executor';
+export {
+  initializeScheduler,
+  scheduleWorkflow,
+  unscheduleWorkflow,
+  handleScheduledAlarm,
+  getScheduledWorkflows,
+  getScheduledWorkflow,
+  setScheduleEnabled,
+  getNextRunTime,
+  describeCron,
+  validateCron,
+} from './scheduler';

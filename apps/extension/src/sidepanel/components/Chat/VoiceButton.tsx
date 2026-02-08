@@ -1,9 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useVoice } from '../../hooks/useVoice';
 
-export function VoiceButton() {
+interface VoiceButtonProps {
+  onVoiceCommand?: (transcript: string) => void;
+  autoSubmit?: boolean;
+}
+
+export function VoiceButton({ onVoiceCommand, autoSubmit = true }: VoiceButtonProps) {
   const { setInputText, settings, setVoiceActive } = useAppStore();
+  
+  const handleFinalTranscript = useCallback((transcript: string) => {
+    setInputText(transcript);
+    
+    // Auto-submit to agent if enabled
+    if (autoSubmit && onVoiceCommand && transcript.trim()) {
+      // Small delay to show the transcript before submitting
+      setTimeout(() => {
+        onVoiceCommand(transcript);
+        setInputText(''); // Clear input after submit
+      }, 300);
+    }
+  }, [autoSubmit, onVoiceCommand, setInputText]);
   
   const {
     isListening,
@@ -14,7 +32,7 @@ export function VoiceButton() {
   } = useVoice({
     onTranscript: (transcript, isFinal) => {
       if (isFinal) {
-        setInputText(transcript);
+        handleFinalTranscript(transcript);
       }
     },
     onError: (err) => {

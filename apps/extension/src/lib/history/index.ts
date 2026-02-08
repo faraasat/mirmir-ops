@@ -24,3 +24,17 @@ export {
   getHistoryStats,
   exportHistory,
 } from './entries';
+export {
+  initializeHistoryCleanup,
+  getRetentionSettings,
+  updateRetentionSettings,
+  runHistoryCleanup,
+  shouldExcludeUrl,
+  addExcludedDomain,
+  removeExcludedDomain,
+  addExcludedPattern,
+  removeExcludedPattern,
+  deleteHistoryForDomain,
+  getHistoryStorageStats,
+  type RetentionSettings,
+} from './retention';

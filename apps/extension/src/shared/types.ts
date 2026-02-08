@@ -286,6 +286,10 @@ export interface UserSettings {
   defaultModel: string;
   voiceEnabled: boolean;
   voiceLanguage: string;
+  voiceFeedbackEnabled: boolean; // TTS for agent responses
+  voiceAutoSubmit: boolean; // Auto-submit voice commands
+  voiceRate: number; // TTS speaking rate
+  voicePitch: number; // TTS pitch
   historyEnabled: boolean;
   analyticsEnabled: boolean;
   theme: 'light' | 'dark' | 'system';
@@ -297,6 +301,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultModel: 'Phi-3-mini-4k-instruct-q4f16_1-MLC',
   voiceEnabled: true,
   voiceLanguage: 'en-US',
+  voiceFeedbackEnabled: true,
+  voiceAutoSubmit: true,
+  voiceRate: 1.0,
+  voicePitch: 1.0,
   historyEnabled: true,
   analyticsEnabled: false,
   theme: 'system',

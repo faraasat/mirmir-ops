@@ -15,7 +15,7 @@ import { useAppStore } from '../store/app-store';
 
 export interface UseLLMOptions {
   onStream?: (content: string) => void;
-  onComplete?: (response: LLMResponse) => void;
+  onComplete?: (content: string) => void; // Called when streaming finishes with full content
   onError?: (error: Error) => void;
 }
 
@@ -90,7 +90,10 @@ export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
           signal: abortControllerRef.current.signal,
         });
 
-        options.onComplete?.(response);
+        // Call onComplete with the content string
+        if (response) {
+          options.onComplete?.(response.content);
+        }
         return response;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'LLM request failed';
@@ -133,6 +136,9 @@ export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
           }
         }
 
+        // Call onComplete with final content
+        options.onComplete?.(fullContent);
+        
         return fullContent;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'LLM stream failed';

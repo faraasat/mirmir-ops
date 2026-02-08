@@ -3,6 +3,7 @@
 import { v4 as uuid } from 'uuid';
 import { getHistoryDatabase } from './database';
 import { getCurrentSession, updateSessionStats } from './session';
+import { shouldExcludeUrl } from './retention';
 import type { HistoryEntry, HistoryFilter, HistoryStats } from './types';
 
 /**
@@ -11,6 +12,21 @@ import type { HistoryEntry, HistoryFilter, HistoryStats } from './types';
 export async function addHistoryEntry(
   entry: Omit<HistoryEntry, 'id' | 'sessionId' | 'timestamp'>
 ): Promise<HistoryEntry> {
+  // Check if URL should be excluded
+  if (entry.context?.url) {
+    const shouldExclude = await shouldExcludeUrl(entry.context.url);
+    if (shouldExclude) {
+      console.log('[History] Skipping excluded URL:', entry.context.url);
+      // Return a placeholder entry without actually saving
+      return {
+        id: 'excluded-' + Date.now(),
+        sessionId: 'excluded',
+        timestamp: Date.now(),
+        ...entry,
+      } as HistoryEntry;
+    }
+  }
+  
   const session = await getCurrentSession();
   
   const fullEntry: HistoryEntry = {

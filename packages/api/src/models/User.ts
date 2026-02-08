@@ -2,6 +2,13 @@ import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import type { PlanType } from '@mirmir/shared';
 
+export interface UserUsage {
+  cloudLlmRequests: number;
+  byokRequests: number;
+  voiceCommands: number;
+  savedWorkflows: number;
+}
+
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -11,6 +18,8 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
+  usage?: UserUsage;
+  customLimits?: Record<string, number>;
   comparePassword(password: string): Promise<boolean>;
 }
 
@@ -43,6 +52,19 @@ const UserSchema = new Schema<IUser>(
     },
     lastLogin: {
       type: Date,
+    },
+    usage: {
+      type: {
+        cloudLlmRequests: { type: Number, default: 0 },
+        byokRequests: { type: Number, default: 0 },
+        voiceCommands: { type: Number, default: 0 },
+        savedWorkflows: { type: Number, default: 0 },
+      },
+      default: {},
+    },
+    customLimits: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
   },
   {

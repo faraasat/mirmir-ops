@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useLLM } from '../../hooks/useLLM';
+import { useVoiceSynthesis } from '../../hooks/useVoiceSynthesis';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { VoiceButton } from './VoiceButton';
@@ -11,6 +12,10 @@ export function ChatView() {
   const { messages, isLoading, settings, addMessage, updateMessage, setLoading } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+  const lastSpokenMessageRef = useRef<string | null>(null);
+  
+  // Voice synthesis for responses
+  const { speak, stop: stopSpeaking, isSpeaking } = useVoiceSynthesis();
 
   const { stream, webllmStatus, loadWebLLM, isStreaming } = useLLM({
     onStream: (content) => {
@@ -18,12 +23,31 @@ export function ChatView() {
         updateMessage(streamingMessageIdRef.current, { content, isLoading: false });
       }
     },
+    onComplete: (finalContent) => {
+      // Speak the response if voice feedback is enabled
+      if (settings.voiceFeedbackEnabled && finalContent && streamingMessageIdRef.current) {
+        // Avoid speaking the same message twice
+        if (lastSpokenMessageRef.current !== streamingMessageIdRef.current) {
+          lastSpokenMessageRef.current = streamingMessageIdRef.current;
+          // Truncate for TTS if too long
+          const textToSpeak = finalContent.length > 500 
+            ? finalContent.substring(0, 500) + '...' 
+            : finalContent;
+          speak(textToSpeak);
+        }
+      }
+    },
     onError: (error) => {
       if (streamingMessageIdRef.current) {
+        const errorMessage = `Sorry, I encountered an error: ${error.message}`;
         updateMessage(streamingMessageIdRef.current, {
-          content: `Sorry, I encountered an error: ${error.message}`,
+          content: errorMessage,
           isLoading: false,
         });
+        // Speak error if voice feedback enabled
+        if (settings.voiceFeedbackEnabled) {
+          speak(errorMessage);
+        }
       }
       streamingMessageIdRef.current = null;
     },
@@ -115,9 +139,30 @@ export function ChatView() {
       <div className="border-t border-border p-4 bg-card">
         <div className="flex items-end gap-2">
           <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming} />
-          <VoiceButton />
+          <VoiceButton 
+            onVoiceCommand={handleSendMessage} 
+            autoSubmit={settings.voiceAutoSubmit !== false} 
+          />
+          {/* Stop speaking button */}
+          {isSpeaking && (
+            <button
+              onClick={stopSpeaking}
+              className="btn-icon bg-orange-500 text-white hover:bg-orange-600"
+              title="Stop speaking"
+            >
+              <StopIcon className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function StopIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
   );
 }

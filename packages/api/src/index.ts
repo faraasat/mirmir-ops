@@ -8,6 +8,7 @@ import { userRouter } from './routes/user';
 import { subscriptionRouter } from './routes/subscription';
 import { usageRouter } from './routes/usage';
 import { licenseRouter } from './routes/license';
+import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/error-handler';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/user', userRouter);
 app.use('/subscription', subscriptionRouter);
 app.use('/usage', usageRouter);
 app.use('/license', licenseRouter);
+app.use('/api/admin', adminRouter);
 
 // Error handler
 app.use(errorHandler);

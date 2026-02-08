@@ -4,6 +4,7 @@ import { checkPermission, requestPermission } from './permissions';
 import { trackUsage, getUsageStats, checkLimit } from './usage-tracker';
 import { saveHistoryEntry, getHistory } from './history-manager';
 import { executeAction } from './action-executor';
+import { processVoiceCommand, type VoiceCommandResult } from './voice-handler';
 
 export async function handleMessage(
   message: Message<unknown>,
@@ -168,26 +169,20 @@ async function handleLLMRequest(
 }
 
 async function handleVoiceCommand(
-  payload: { transcript: string },
+  payload: { transcript: string; autoExecute?: boolean; speakResponse?: boolean },
   tabId?: number
-): Promise<MessageResponse<unknown>> {
-  // Check voice command limits
-  const withinLimits = await checkLimit('voice');
-  if (!withinLimits) {
-    return { success: false, error: 'Voice command limit reached for today.' };
-  }
-
-  // Track usage
-  await trackUsage('voice', 'command');
-
-  // Save to history
-  await saveHistoryEntry({
-    type: 'command',
-    data: { input: payload.transcript },
-    tabId,
+): Promise<MessageResponse<VoiceCommandResult>> {
+  // Process voice command with NLP and optional agent routing
+  const result = await processVoiceCommand(payload.transcript, tabId, {
+    autoExecute: payload.autoExecute,
+    speakResponse: payload.speakResponse,
   });
-
-  return { success: true, data: { transcript: payload.transcript } };
+  
+  return { 
+    success: result.success, 
+    data: result,
+    error: result.error,
+  };
 }
 
 async function handleSaveHistory(payload: unknown): Promise<MessageResponse<void>> {

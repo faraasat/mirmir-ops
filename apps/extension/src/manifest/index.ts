@@ -25,6 +25,7 @@ const baseManifest: ManifestV3Export = {
     'notifications',
     'clipboardRead',
     'clipboardWrite',
+    'alarms',
   ],
 
   optional_permissions: [

@@ -13,6 +13,9 @@ const sidePanel = (browser as unknown as { sidePanel?: SidePanelAPI }).sidePanel
 import { initializeStorage } from './storage';
 import { initializePermissions } from './permissions';
 import { initializeUsageTracker } from './usage-tracker';
+import { initializeTabManager, updateTabState, cleanupStaleTabs } from './tab-manager';
+import { initializeHistoryCleanup, runHistoryCleanup } from '@/lib/history';
+import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';
 
 // Initialize on extension install/update
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -110,6 +113,11 @@ browser.runtime.onMessage.addListener(
 
 // Handle tab updates for context tracking
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Update tab state on URL or title change
+  if (tab.url && (changeInfo.url || changeInfo.title)) {
+    updateTabState(tabId, tab.url, tab.title || '');
+  }
+  
   if (changeInfo.status === 'complete' && tab.url) {
     // Notify content script that page is ready
     try {
@@ -131,9 +139,34 @@ async function initialize() {
   await initializeStorage();
   await initializePermissions();
   initializeUsageTracker();
+  initializeTabManager();
+  await initializeHistoryCleanup();
+  await initializeScheduler();
+  
+  // Set up periodic cleanup (every 30 minutes)
+  browser.alarms.create('cleanup-stale-tabs', { periodInMinutes: 30 });
   
   console.log('[MirmirOps] Background service worker ready');
 }
+
+// Handle alarms
+browser.alarms.onAlarm.addListener(async (alarm) => {
+  // Check for workflow schedules first (they have prefix)
+  if (alarm.name.startsWith('workflow-schedule-')) {
+    await handleScheduledAlarm(alarm.name);
+    return;
+  }
+  
+  // Handle system alarms
+  switch (alarm.name) {
+    case 'cleanup-stale-tabs':
+      await cleanupStaleTabs();
+      break;
+    case 'history-cleanup':
+      await runHistoryCleanup();
+      break;
+  }
+});
 
 initialize().catch(console.error);
 
