@@ -63,15 +63,25 @@ export function ModelSelectorBar() {
   const providerInfo = getProviderInfo(provider);
   const modelDisplayName = getModelDisplayName(provider, settings.defaultModel, webllmStatus);
 
-  // Check if configuration is needed
+  // Check if configuration is needed - only show "Setup" if keys are truly missing
   const needsConfiguration = (() => {
     if (provider === 'webllm') {
-      return !webllmStatus || webllmStatus.status !== 'ready';
+      return !webllmStatus || (webllmStatus.status !== 'ready' && webllmStatus.status !== 'loading');
     }
     if (provider === 'openai') return !settings.apiKeys?.openai;
     if (provider === 'anthropic') return !settings.apiKeys?.anthropic;
     if (provider === 'ollama') return !settings.apiKeys?.ollama;
     if (provider === 'byok') return !settings.apiKeys?.byokEndpoint || !settings.apiKeys?.byokModel;
+    return false;
+  })();
+
+  // Check if provider is configured (key exists) but model might need selection
+  const isConfigured = (() => {
+    if (provider === 'webllm') return webllmStatus?.status === 'ready';
+    if (provider === 'openai') return !!settings.apiKeys?.openai;
+    if (provider === 'anthropic') return !!settings.apiKeys?.anthropic;
+    if (provider === 'ollama') return !!settings.apiKeys?.ollama;
+    if (provider === 'byok') return !!settings.apiKeys?.byokEndpoint && !!settings.apiKeys?.byokModel;
     return false;
   })();
 
@@ -166,13 +176,13 @@ export function ModelSelectorBar() {
               Setup
             </span>
           )}
-          {!needsConfiguration && provider === 'webllm' && webllmStatus?.status === 'ready' && (
+          {isConfigured && provider === 'webllm' && (
             <span className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Local
             </span>
           )}
-          {!needsConfiguration && provider !== 'webllm' && (
+          {isConfigured && provider !== 'webllm' && (
             <span className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
               Cloud

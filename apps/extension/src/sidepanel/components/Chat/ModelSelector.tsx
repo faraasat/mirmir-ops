@@ -89,7 +89,7 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
   const [ollamaEndpoint, setOllamaEndpoint] = useState(settings.apiKeys?.ollama || 'http://localhost:11434');
   const [customOllamaModel, setCustomOllamaModel] = useState('');
   
-  // API key state for OpenAI/Anthropic
+  // API key state for OpenAI/Anthropic - always read from saved settings
   const getApiKeyForProvider = (p: LLMProvider): string => {
     if (!settings.apiKeys) return '';
     if (p === 'openai') return settings.apiKeys.openai || '';
@@ -99,6 +99,14 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
     return '';
   };
   const [apiKey, setApiKey] = useState(getApiKeyForProvider(provider));
+
+  // Update apiKey when provider changes and key already exists in settings
+  useEffect(() => {
+    const savedKey = getApiKeyForProvider(provider);
+    if (savedKey) {
+      setApiKey(savedKey);
+    }
+  }, [provider, settings.apiKeys]);
 
   useEffect(() => {
     if (provider === 'webllm') {

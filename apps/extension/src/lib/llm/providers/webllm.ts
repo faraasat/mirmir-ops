@@ -14,7 +14,6 @@ import {
   recordModelDownload, 
   updateModelLastUsed, 
   isModelDownloaded,
-  checkWebLLMCache 
 } from '../model-cache';
 
 // Types for WebLLM (will be imported from @mlc-ai/web-llm)
@@ -152,28 +151,28 @@ export class WebLLMProvider implements LLMProviderInterface {
 
   /**
    * Check if a model is already cached (downloaded previously)
-   * Uses WebLLM's built-in cache check for reliability
+   * Uses WebLLM's built-in cache check with IndexedDB config for reliability
    */
   async isModelCached(modelId?: string): Promise<boolean> {
     const model = modelId || this.config.model;
     
     try {
-      // Prefer WebLLM's own cache checking API - most reliable
-      const { hasModelInCache } = await import('@mlc-ai/web-llm');
-      const cacheExists = await hasModelInCache(model);
+      // Use WebLLM's own cache checking with IndexedDB config
+      const { hasModelInCache, prebuiltAppConfig } = await import('@mlc-ai/web-llm');
+      const appConfig = {
+        ...prebuiltAppConfig,
+        useIndexedDBCache: true,
+      };
+      const cacheExists = await hasModelInCache(model, appConfig);
       
       console.log(`[WebLLM] Cache check for ${model}: ${cacheExists}`);
       
       return cacheExists;
     } catch (error) {
       console.log('[WebLLM] Error checking cache with WebLLM API, falling back:', error);
-      // Fallback: check both our record and generic cache check
-      const [recorded, cacheExists] = await Promise.all([
-        isModelDownloaded(model),
-        checkWebLLMCache(model),
-      ]);
-      
-      return recorded && cacheExists;
+      // Fallback: check our own record
+      const recorded = await isModelDownloaded(model);
+      return recorded;
     }
   }
 
@@ -212,26 +211,25 @@ export class WebLLMProvider implements LLMProviderInterface {
     this.loadingPromise = (async () => {
       try {
         // Dynamically import WebLLM
-        const { CreateMLCEngine } = await import('@mlc-ai/web-llm');
+        const { CreateMLCEngine, prebuiltAppConfig } = await import('@mlc-ai/web-llm');
 
-        // Create engine with progress callback
+        // Use IndexedDB cache for better persistence across extension reloads
+        // Cache API can be unreliable in extension contexts
+        const appConfig = {
+          ...prebuiltAppConfig,
+          useIndexedDBCache: true,
+        };
+
+        // Create engine with progress callback and IndexedDB caching
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.engine = await CreateMLCEngine(model, {
+          appConfig,
           initProgressCallback: (report: { progress: number; text: string }) => {
-            // Determine if we're downloading or loading from cache
-            const isDownloading = report.text.toLowerCase().includes('download') || 
-                                  report.text.toLowerCase().includes('fetch');
-            
             this.updateProgress({
               status: 'loading',
               progress: report.progress,
               text: report.text,
             });
-            
-            // If we're downloading (not from cache), we'll record it when complete
-            if (isDownloading && report.progress < 1) {
-              // Still downloading
-            }
           },
         }) as unknown as WebLLMEngine;
 
