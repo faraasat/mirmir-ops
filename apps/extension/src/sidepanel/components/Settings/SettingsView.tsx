@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/app-store';
 import type { LLMProvider } from '@/shared/types';
 import { 
@@ -10,12 +10,92 @@ import {
 import { PrivacySettingsView } from './PrivacySettings';
 import { SecurityView } from './SecurityView';
 import { ThemeSettingsView } from './ThemeSettings';
+import {
+  fetchOpenAIModels,
+  fetchAnthropicModels,
+  fetchOllamaModels,
+  fetchBYOKModels,
+  type FetchedModel,
+} from '@/lib/llm/model-fetcher';
 
 type SettingsTab = 'general' | 'privacy' | 'security' | 'theme';
 
 export function SettingsView() {
   const { settings, updateSettings, user, usage } = useAppStore();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  
+  // Dynamic model fetching state
+  const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+
+  // Fetch models when API key or provider changes
+  const fetchModelsForProvider = useCallback(async () => {
+    setModelFetchError(null);
+    
+    const provider = settings.defaultLLMProvider;
+    
+    if (provider === 'webllm') {
+      setFetchedModels([]);
+      return;
+    }
+
+    if (provider === 'openai' && settings.apiKeys?.openai) {
+      setIsLoadingModels(true);
+      try {
+        const models = await fetchOpenAIModels(settings.apiKeys.openai);
+        setFetchedModels(models);
+      } catch (error) {
+        setModelFetchError(error instanceof Error ? error.message : 'Failed to fetch models');
+        setFetchedModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    } else if (provider === 'anthropic' && settings.apiKeys?.anthropic) {
+      setIsLoadingModels(true);
+      try {
+        const models = await fetchAnthropicModels(settings.apiKeys.anthropic);
+        setFetchedModels(models);
+      } catch (error) {
+        setModelFetchError(error instanceof Error ? error.message : 'Failed to validate key');
+        setFetchedModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    } else if (provider === 'ollama' && settings.apiKeys?.ollama) {
+      setIsLoadingModels(true);
+      try {
+        const models = await fetchOllamaModels(settings.apiKeys.ollama);
+        setFetchedModels(models);
+      } catch (error) {
+        setModelFetchError(error instanceof Error ? error.message : 'Failed to connect to Ollama');
+        setFetchedModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    } else if (provider === 'byok' && settings.apiKeys?.byokEndpoint) {
+      setIsLoadingModels(true);
+      try {
+        const models = await fetchBYOKModels(
+          settings.apiKeys.byokEndpoint,
+          settings.apiKeys.byok
+        );
+        setFetchedModels(models);
+      } catch {
+        // Don't show error for BYOK - it's optional
+        setFetchedModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    } else {
+      setFetchedModels([]);
+    }
+  }, [settings.defaultLLMProvider, settings.apiKeys?.openai, settings.apiKeys?.anthropic, settings.apiKeys?.ollama, settings.apiKeys?.byokEndpoint, settings.apiKeys?.byok]);
+
+  // Fetch models on mount and when relevant settings change
+  useEffect(() => {
+    fetchModelsForProvider();
+  }, [fetchModelsForProvider]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -153,34 +233,84 @@ export function SettingsView() {
             <>
               <div>
                 <label className="text-sm text-muted-foreground">API Key</label>
-                <input
-                  type="password"
-                  value={settings.apiKeys?.openai || ''}
-                  onChange={(e) =>
-                    updateSettings({
-                      apiKeys: {
-                        ...settings.apiKeys,
-                        openai: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="sk-..."
-                  className="input mt-1"
-                />
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="password"
+                    value={settings.apiKeys?.openai || ''}
+                    onChange={(e) =>
+                      updateSettings({
+                        apiKeys: {
+                          ...settings.apiKeys,
+                          openai: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="sk-..."
+                    className="input flex-1"
+                  />
+                  {settings.apiKeys?.openai && (
+                    <button
+                      onClick={fetchModelsForProvider}
+                      disabled={isLoadingModels}
+                      className="btn-secondary text-xs px-3"
+                    >
+                      {isLoadingModels ? 'Loading...' : 'Fetch Models'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Model</label>
-                <select
-                  value={settings.defaultModel}
-                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                  className="input mt-1"
-                >
-                  {Object.entries(OPENAI_MODELS).map(([id, model]) => (
-                    <option key={id} value={id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
+                {isLoadingModels ? (
+                  <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
+                    <LoadingSpinner className="w-4 h-4" />
+                    <span>Loading models...</span>
+                  </div>
+                ) : modelFetchError ? (
+                  <div className="mt-1">
+                    <p className="text-xs text-destructive mb-2">{modelFetchError}</p>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input"
+                    >
+                      {Object.entries(OPENAI_MODELS).map(([id, model]) => (
+                        <option key={id} value={id}>
+                          {model.name} - {model.description}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : fetchedModels.length > 0 ? (
+                  <select
+                    value={settings.defaultModel}
+                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                    className="input mt-1"
+                  >
+                    {fetchedModels.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}{model.description ? ` - ${model.description}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={settings.defaultModel}
+                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                    className="input mt-1"
+                  >
+                    {Object.entries(OPENAI_MODELS).map(([id, model]) => (
+                      <option key={id} value={id}>
+                        {model.name} - {model.description}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {fetchedModels.length > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    ✓ {fetchedModels.length} models available from your account
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -204,20 +334,47 @@ export function SettingsView() {
                   placeholder="sk-ant-..."
                   className="input mt-1"
                 />
+                {modelFetchError && settings.apiKeys?.anthropic && (
+                  <p className="text-xs text-destructive mt-1">{modelFetchError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Model</label>
-                <select
-                  value={settings.defaultModel}
-                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                  className="input mt-1"
-                >
-                  {Object.entries(ANTHROPIC_MODELS).map(([id, model]) => (
-                    <option key={id} value={id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
+                {isLoadingModels ? (
+                  <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
+                    <LoadingSpinner className="w-4 h-4" />
+                    <span>Loading models...</span>
+                  </div>
+                ) : fetchedModels.length > 0 ? (
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {fetchedModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}{model.description ? ` - ${model.description}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ API key validated
+                    </p>
+                  </>
+                ) : (
+                  <select
+                    value={settings.defaultModel}
+                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                    className="input mt-1"
+                  >
+                    {Object.entries(ANTHROPIC_MODELS).map(([id, model]) => (
+                      <option key={id} value={id}>
+                        {model.name} - {model.description}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </>
           )}
@@ -227,34 +384,75 @@ export function SettingsView() {
             <>
               <div>
                 <label className="text-sm text-muted-foreground">Server URL</label>
-                <input
-                  type="url"
-                  value={settings.apiKeys?.ollama || 'http://localhost:11434'}
-                  onChange={(e) =>
-                    updateSettings({
-                      apiKeys: {
-                        ...settings.apiKeys,
-                        ollama: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="http://localhost:11434"
-                  className="input mt-1"
-                />
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="url"
+                    value={settings.apiKeys?.ollama || 'http://localhost:11434'}
+                    onChange={(e) =>
+                      updateSettings({
+                        apiKeys: {
+                          ...settings.apiKeys,
+                          ollama: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="http://localhost:11434"
+                    className="input flex-1"
+                  />
+                  <button
+                    onClick={fetchModelsForProvider}
+                    disabled={isLoadingModels}
+                    className="btn-secondary text-xs px-3"
+                  >
+                    {isLoadingModels ? 'Loading...' : 'Connect'}
+                  </button>
+                </div>
+                {modelFetchError && (
+                  <p className="text-xs text-destructive mt-1">{modelFetchError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Model</label>
-                <select
-                  value={settings.defaultModel}
-                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                  className="input mt-1"
-                >
-                  {Object.entries(OLLAMA_MODELS).map(([id, model]) => (
-                    <option key={id} value={id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
+                {isLoadingModels ? (
+                  <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
+                    <LoadingSpinner className="w-4 h-4" />
+                    <span>Fetching models from Ollama...</span>
+                  </div>
+                ) : fetchedModels.length > 0 ? (
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {fetchedModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}{model.description ? ` (${model.description})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ Connected - {fetchedModels.length} models available
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {Object.entries(OLLAMA_MODELS).map(([id, model]) => (
+                        <option key={id} value={id}>
+                          {model.name} - {model.description}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click "Connect" to fetch models from your Ollama server
+                    </p>
+                  </>
+                )}
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Custom Model Name (optional)</label>
@@ -274,7 +472,7 @@ export function SettingsView() {
                   className="input mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use this to specify a model not in the list above
+                  Or manually enter a model name if not listed above
                 </p>
               </div>
             </>
@@ -285,22 +483,33 @@ export function SettingsView() {
             <>
               <div>
                 <label className="text-sm text-muted-foreground">API Endpoint *</label>
-                <input
-                  type="url"
-                  value={settings.apiKeys?.byokEndpoint || ''}
-                  onChange={(e) =>
-                    updateSettings({
-                      apiKeys: {
-                        ...settings.apiKeys,
-                        byokEndpoint: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="https://api.your-provider.com/v1"
-                  className="input mt-1"
-                />
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="url"
+                    value={settings.apiKeys?.byokEndpoint || ''}
+                    onChange={(e) =>
+                      updateSettings({
+                        apiKeys: {
+                          ...settings.apiKeys,
+                          byokEndpoint: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="https://api.your-provider.com/v1"
+                    className="input flex-1"
+                  />
+                  {settings.apiKeys?.byokEndpoint && (
+                    <button
+                      onClick={fetchModelsForProvider}
+                      disabled={isLoadingModels}
+                      className="btn-secondary text-xs px-3"
+                    >
+                      {isLoadingModels ? 'Loading...' : 'Fetch'}
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  OpenAI-compatible API endpoint
+                  OpenAI-compatible API endpoint (e.g., /v1/chat/completions)
                 </p>
               </div>
               <div>
@@ -322,24 +531,59 @@ export function SettingsView() {
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Model Name *</label>
-                <input
-                  type="text"
-                  value={settings.apiKeys?.byokModel || ''}
-                  onChange={(e) =>
-                    updateSettings({
-                      apiKeys: {
-                        ...settings.apiKeys,
-                        byokModel: e.target.value,
-                      },
-                      defaultModel: e.target.value,
-                    })
-                  }
-                  placeholder="e.g., gpt-4, llama-3, mistral"
-                  className="input mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  The model identifier to use with your provider
-                </p>
+                {isLoadingModels ? (
+                  <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
+                    <LoadingSpinner className="w-4 h-4" />
+                    <span>Fetching models...</span>
+                  </div>
+                ) : fetchedModels.length > 0 ? (
+                  <>
+                    <select
+                      value={settings.apiKeys?.byokModel || settings.defaultModel}
+                      onChange={(e) =>
+                        updateSettings({
+                          apiKeys: {
+                            ...settings.apiKeys,
+                            byokModel: e.target.value,
+                          },
+                          defaultModel: e.target.value,
+                        })
+                      }
+                      className="input mt-1"
+                    >
+                      <option value="">Select a model...</option>
+                      {fetchedModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ {fetchedModels.length} models found
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={settings.apiKeys?.byokModel || ''}
+                      onChange={(e) =>
+                        updateSettings({
+                          apiKeys: {
+                            ...settings.apiKeys,
+                            byokModel: e.target.value,
+                          },
+                          defaultModel: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., gpt-4, llama-3, mistral"
+                      className="input mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter the model identifier, or click Fetch to list available models
+                    </p>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -476,5 +720,14 @@ function Toggle({
         }`}
       />
     </button>
+  );
+}
+
+function LoadingSpinner({ className }: { className?: string }) {
+  return (
+    <svg className={`${className} animate-spin`} fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
   );
 }

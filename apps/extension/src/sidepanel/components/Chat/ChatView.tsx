@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useLLM } from '../../hooks/useLLM';
 import { useVoiceSynthesis } from '../../hooks/useVoiceSynthesis';
@@ -6,70 +6,13 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { VoiceButton } from './VoiceButton';
 import { WebLLMStatus } from './WebLLMStatus';
-import { ModelSelector } from './ModelSelector';
 import { createContextualPrompt } from '@/lib/llm/prompts';
-import type { LLMProvider } from '@/shared/types';
-
-// Helper to get display name for the current model
-function getModelDisplayName(provider: LLMProvider, model: string | undefined, webllmStatus: { status: string } | null): string {
-  if (provider === 'webllm') {
-    if (webllmStatus?.status === 'ready') {
-      // Shorten WebLLM model names
-      const shortNames: Record<string, string> = {
-        'Phi-3-mini-4k-instruct-q4f16_1-MLC': 'Phi-3 Mini',
-        'Llama-3.1-8B-Instruct-q4f16_1-MLC': 'Llama 3.1 8B',
-        'Mistral-7B-Instruct-v0.2-q4f16_1': 'Mistral 7B',
-        'gemma-2b-it-q4f16_1-MLC': 'Gemma 2B',
-        'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC': 'TinyLlama 1.1B',
-      };
-      return shortNames[model || ''] || model || 'Local AI';
-    }
-    return 'Not loaded';
-  }
-  if (provider === 'openai') {
-    const shortNames: Record<string, string> = {
-      'gpt-4o': 'GPT-4o',
-      'gpt-4o-mini': 'GPT-4o Mini',
-      'gpt-4-turbo': 'GPT-4 Turbo',
-      'gpt-3.5-turbo': 'GPT-3.5',
-    };
-    return shortNames[model || ''] || model || 'OpenAI';
-  }
-  if (provider === 'anthropic') {
-    const shortNames: Record<string, string> = {
-      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-      'claude-3-opus-20240229': 'Claude 3 Opus',
-      'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
-      'claude-3-haiku-20240307': 'Claude 3 Haiku',
-    };
-    return shortNames[model || ''] || model || 'Claude';
-  }
-  if (provider === 'ollama') {
-    return model || 'Ollama';
-  }
-  if (provider === 'byok') {
-    return model || 'Custom';
-  }
-  return 'AI';
-}
-
-function getProviderIcon(provider: LLMProvider): string {
-  switch (provider) {
-    case 'webllm': return '🖥️';
-    case 'openai': return '🟢';
-    case 'anthropic': return '🟣';
-    case 'ollama': return '🦙';
-    case 'byok': return '🔧';
-    default: return '🤖';
-  }
-}
 
 export function ChatView() {
-  const { messages, isLoading, settings, addMessage, updateMessage, setLoading, setView } = useAppStore();
+  const { messages, isLoading, settings, addMessage, updateMessage, setLoading } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
   const lastSpokenMessageRef = useRef<string | null>(null);
-  const [showModelSelector, setShowModelSelector] = useState(false);
   
   // Voice synthesis for responses
   const { speak, stop: stopSpeaking, isSpeaking } = useVoiceSynthesis();
@@ -131,18 +74,6 @@ export function ChatView() {
     }
     return false;
   })();
-  
-  const getConfigurationMessage = () => {
-    const provider = settings.defaultLLMProvider;
-    switch (provider) {
-      case 'webllm': return { title: 'AI Model Required', desc: 'Select and download a model to chat' };
-      case 'openai': return { title: 'OpenAI API Key Required', desc: 'Enter your API key to use OpenAI' };
-      case 'anthropic': return { title: 'Anthropic API Key Required', desc: 'Enter your API key to use Claude' };
-      case 'ollama': return { title: 'Ollama Setup Required', desc: 'Configure your Ollama server connection' };
-      case 'byok': return { title: 'Custom Provider Setup', desc: 'Configure your API endpoint and model' };
-      default: return { title: 'Configuration Required', desc: 'Set up your AI provider' };
-    }
-  };
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -219,75 +150,8 @@ export function ChatView() {
     }
   }, [loadWebLLM, settings.defaultModel]);
 
-  const configMsg = getConfigurationMessage();
-  const modelDisplayName = getModelDisplayName(settings.defaultLLMProvider, settings.defaultModel, webllmStatus);
-  const providerIcon = getProviderIcon(settings.defaultLLMProvider);
-  
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Model Status Bar (always visible) */}
-      {!showModelSelector && !needsConfiguration && (
-        <div className="shrink-0 px-3 py-1.5 bg-muted/30 border-b border-border flex items-center justify-between">
-          <button 
-            onClick={() => setShowModelSelector(true)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <span>{providerIcon}</span>
-            <span className="font-medium">{modelDisplayName}</span>
-            <ChevronDownIcon className="w-3 h-3" />
-          </button>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            {webllmStatus?.status === 'ready' && settings.defaultLLMProvider === 'webllm' && (
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                Local
-              </span>
-            )}
-            {settings.defaultLLMProvider !== 'webllm' && (
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                Cloud
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Configuration Banner (show when provider needs setup) */}
-      {needsConfiguration && !showModelSelector && (
-        <div className="shrink-0 p-3 bg-primary/5 border-b border-primary/20">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <BrainIcon className="w-4 h-4 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium truncate">{configMsg.title}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{configMsg.desc}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowModelSelector(true)}
-              className="shrink-0 btn-primary text-xs py-1.5 px-3 rounded-lg"
-            >
-              Setup
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Model/Provider Selector */}
-      {showModelSelector && (
-        <div className="shrink-0 p-3 border-b border-border">
-          <ModelSelector 
-            compact
-            provider={settings.defaultLLMProvider}
-            onModelReady={() => setShowModelSelector(false)}
-            onDismiss={() => setShowModelSelector(false)}
-          />
-        </div>
-      )}
-
       {/* WebLLM Status (only show for webllm provider when loading) */}
       {settings.defaultLLMProvider === 'webllm' && webllmStatus && 
         webllmStatus.status !== 'idle' && webllmStatus.status !== 'ready' && (
@@ -318,16 +182,6 @@ export function ChatView() {
       <div className="shrink-0 border-t border-border p-3 bg-card">
         <div className="flex items-center gap-2">
           <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming || needsConfiguration} />
-          {/* Configuration warning indicator */}
-          {needsConfiguration && (
-            <button
-              onClick={() => setShowModelSelector(true)}
-              className="btn-icon bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 shrink-0"
-              title="AI model not configured - click to setup"
-            >
-              <WarningIcon className="w-5 h-5" />
-            </button>
-          )}
           <VoiceButton 
             onVoiceCommand={handleSendMessage} 
             autoSubmit={settings.voiceAutoSubmit !== false} 
@@ -352,30 +206,6 @@ function StopIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function WarningIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  );
-}
-
-function BrainIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }

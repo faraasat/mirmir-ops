@@ -199,22 +199,24 @@ export const MemoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs - horizontally scrollable */}
+      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 min-w-max">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <tab.icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from './store/app-store';
 import { Header } from './components/common/Header';
+import { ModelSelectorBar } from './components/common/ModelSelectorBar';
 import { ChatView } from './components/Chat/ChatView';
 import { HistoryView } from './components/History/HistoryView';
 import { WorkflowsView } from './components/Workflows/WorkflowsView';
@@ -76,6 +77,7 @@ export function App() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       <Header />
+      <ModelSelectorBar />
       <main className="flex-1 overflow-hidden">
         {renderView()}
       </main>

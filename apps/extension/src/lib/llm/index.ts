@@ -8,3 +8,7 @@ export { OllamaProvider } from './providers/ollama';
 export { BYOKProvider } from './providers/byok';
 export { WebLLMProvider, getWebLLMProvider } from './providers/webllm';
 export type { WebLLMStatus, WebLLMProgress } from './providers/webllm';
+
+// Model management
+export * from './model-cache';
+export * from './model-fetcher';

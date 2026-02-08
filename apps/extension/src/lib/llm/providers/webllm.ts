@@ -9,7 +9,13 @@ import type {
   LLMMessage,
   WebLLMConfig,
 } from '../types';
-import { WEBLLM_MODELS } from '../types';
+import { WEBLLM_MODELS } from '@/shared/constants';
+import { 
+  recordModelDownload, 
+  updateModelLastUsed, 
+  isModelDownloaded,
+  checkWebLLMCache 
+} from '../model-cache';
 
 // Types for WebLLM (will be imported from @mlc-ai/web-llm)
 interface WebLLMEngine {
@@ -136,12 +142,29 @@ export class WebLLMProvider implements LLMProviderInterface {
     return this.currentModel;
   }
 
-  getAvailableModels() {
+  getAvailableModels(): typeof WEBLLM_MODELS {
     return WEBLLM_MODELS;
   }
 
   updateConfig(config: Partial<WebLLMConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * Check if a model is already cached (downloaded previously)
+   */
+  async isModelCached(modelId?: string): Promise<boolean> {
+    const model = modelId || this.config.model;
+    
+    // Check our record and verify cache still exists
+    const [recorded, cacheExists] = await Promise.all([
+      isModelDownloaded(model),
+      checkWebLLMCache(model),
+    ]);
+    
+    // Return true if we have a record AND cache exists
+    // This handles cases where cache was cleared but our record remains
+    return recorded && cacheExists;
   }
 
   async loadModel(modelId?: string): Promise<void> {
@@ -154,6 +177,8 @@ export class WebLLMProvider implements LLMProviderInterface {
         progress: 1,
         text: `${model} is ready`,
       });
+      // Update last used time
+      updateModelLastUsed(model).catch(console.error);
       return;
     }
     
@@ -164,11 +189,14 @@ export class WebLLMProvider implements LLMProviderInterface {
       return this.loadingPromise;
     }
 
+    // Check if model is already cached
+    const isCached = await this.isModelCached(model);
+
     this.isLoading = true;
     this.updateProgress({
       status: 'loading',
       progress: 0,
-      text: `Loading ${model}...`,
+      text: isCached ? `Loading ${model} from cache...` : `Downloading ${model}...`,
     });
 
     this.loadingPromise = (async () => {
@@ -180,16 +208,30 @@ export class WebLLMProvider implements LLMProviderInterface {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.engine = await CreateMLCEngine(model, {
           initProgressCallback: (report: { progress: number; text: string }) => {
+            // Determine if we're downloading or loading from cache
+            const isDownloading = report.text.toLowerCase().includes('download') || 
+                                  report.text.toLowerCase().includes('fetch');
+            
             this.updateProgress({
               status: 'loading',
               progress: report.progress,
               text: report.text,
             });
+            
+            // If we're downloading (not from cache), we'll record it when complete
+            if (isDownloading && report.progress < 1) {
+              // Still downloading
+            }
           },
         }) as unknown as WebLLMEngine;
 
         this.currentModel = model;
         this.config.model = model;
+
+        // Record the model as downloaded/cached
+        const modelInfo = WEBLLM_MODELS[model as keyof typeof WEBLLM_MODELS];
+        const size = modelInfo?.size || 'unknown';
+        await recordModelDownload(model, size);
 
         this.updateProgress({
           status: 'ready',

@@ -166,6 +166,16 @@
   @apply bg-muted-foreground/30;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Voice input animation */
 .voice-active {
   animation: pulse 1.5s ease-in-out infinite;

@@ -1,3 +1,6 @@
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -59,14 +62,100 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
         
-        <div className="text-sm whitespace-pre-wrap">
+        <div className="text-sm">
           {message.isLoading ? (
             <span className="flex items-center gap-2">
               <LoadingSpinner className="w-4 h-4" />
               <span className="animate-pulse">Processing...</span>
             </span>
+          ) : isUser ? (
+            // User messages - plain text
+            <span className="whitespace-pre-wrap">{message.content}</span>
           ) : (
-            formatContent(message.content)
+            // Assistant messages - render markdown
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-2 prose-code:text-xs">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Customize code blocks
+                  code: ({ className, children, ...props }) => {
+                    const isInline = !className;
+                    if (isInline) {
+                      return (
+                        <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs font-mono" {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                    return (
+                      <code className={`block bg-black/10 dark:bg-white/10 p-2 rounded text-xs font-mono overflow-x-auto ${className || ''}`} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  // Customize pre blocks
+                  pre: ({ children }) => (
+                    <pre className="bg-black/10 dark:bg-white/10 p-2 rounded overflow-x-auto my-2">
+                      {children}
+                    </pre>
+                  ),
+                  // Customize links
+                  a: ({ children, href }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  // Customize lists
+                  ul: ({ children }) => (
+                    <ul className="list-disc list-inside space-y-0.5">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside space-y-0.5">{children}</ol>
+                  ),
+                  // Customize blockquote
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-2 border-primary/50 pl-3 my-2 italic">
+                      {children}
+                    </blockquote>
+                  ),
+                  // Customize tables
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto my-2">
+                      <table className="min-w-full text-xs border-collapse">{children}</table>
+                    </div>
+                  ),
+                  th: ({ children }) => (
+                    <th className="border border-border px-2 py-1 bg-muted font-medium text-left">
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="border border-border px-2 py-1">{children}</td>
+                  ),
+                  // Customize paragraphs
+                  p: ({ children }) => (
+                    <p className="my-1">{children}</p>
+                  ),
+                  // Customize headings
+                  h1: ({ children }) => (
+                    <h1 className="text-lg font-bold my-2">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-base font-bold my-2">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-sm font-bold my-1">{children}</h3>
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           )}
         </div>
         
@@ -93,22 +182,6 @@ function LoadingSpinner({ className }: { className?: string }) {
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
     </svg>
   );
-}
-
-function formatContent(content: string): React.ReactNode {
-  // Simple markdown-like formatting
-  const parts = content.split(/(`[^`]+`)/g);
-  
-  return parts.map((part, index) => {
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code key={index} className="bg-black/10 dark:bg-white/10 px-1 rounded text-xs font-mono">
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return part;
-  });
 }
 
 function formatTime(timestamp: number): string {

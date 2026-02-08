@@ -90,7 +90,15 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
   const [customOllamaModel, setCustomOllamaModel] = useState('');
   
   // API key state for OpenAI/Anthropic
-  const [apiKey, setApiKey] = useState(settings.apiKeys?.[provider] || '');
+  const getApiKeyForProvider = (p: LLMProvider): string => {
+    if (!settings.apiKeys) return '';
+    if (p === 'openai') return settings.apiKeys.openai || '';
+    if (p === 'anthropic') return settings.apiKeys.anthropic || '';
+    if (p === 'ollama') return settings.apiKeys.ollama || '';
+    if (p === 'byok') return settings.apiKeys.byok || '';
+    return '';
+  };
+  const [apiKey, setApiKey] = useState(getApiKeyForProvider(provider));
 
   useEffect(() => {
     if (provider === 'webllm') {
@@ -180,9 +188,11 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
     
     switch (status.status) {
       case 'loading':
+        // Check the text for more specific messages
+        if (status.text?.toLowerCase().includes('download')) {
+          return `Downloading... ${getProgressPercent(status)}%`;
+        }
         return `Loading... ${getProgressPercent(status)}%`;
-      case 'downloading':
-        return `Downloading... ${getProgressPercent(status)}%`;
       case 'ready':
         return 'Model ready!';
       case 'error':

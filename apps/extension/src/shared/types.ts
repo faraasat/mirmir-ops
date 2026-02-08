@@ -288,6 +288,17 @@ export interface StorageData {
   permissions: Permission[];
 }
 
+export interface ApiKeys {
+  openai?: string;
+  anthropic?: string;
+  ollama?: string;
+  byok?: string;
+  // Extended keys for custom configuration
+  byokEndpoint?: string;
+  byokModel?: string;
+  ollamaCustomModel?: string;
+}
+
 export interface UserSettings {
   defaultLLMProvider: LLMProvider;
   defaultModel: string;
@@ -300,7 +311,7 @@ export interface UserSettings {
   historyEnabled: boolean;
   analyticsEnabled: boolean;
   theme: 'light' | 'dark' | 'system';
-  apiKeys: Partial<Record<LLMProvider, string>>;
+  apiKeys?: ApiKeys;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
