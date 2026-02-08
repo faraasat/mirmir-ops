@@ -49,9 +49,9 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
       <button
         onClick={handleSubmit}
         disabled={!inputText.trim() || disabled}
-        className="absolute right-2 bottom-2 w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+        className="absolute right-1 bottom-1 w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
       >
-        <SendIcon className="w-4 h-4" />
+        <SendIcon className="w-4 h-4 rotate-90" />
       </button>
     </div>
   );

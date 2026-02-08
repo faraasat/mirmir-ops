@@ -143,6 +143,34 @@ export const MemoryView: React.FC = () => {
     loadData();
   };
 
+  const handleExportMemory = async () => {
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      semantic: {
+        stats: memoryStats,
+        memories: memories,
+      },
+      preferences: {
+        formPreferences: formPrefs,
+        frequentSites: frequentSites,
+      },
+      learning: {
+        stats: learningStats,
+        patterns: patterns,
+      },
+      conversations: sessions,
+    };
+    
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mirmirops-memory-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const tabs = [
     { id: 'semantic' as const, label: 'Semantic', icon: BrainIcon },
     { id: 'preferences' as const, label: 'Preferences', icon: SettingsIcon },
@@ -154,12 +182,21 @@ export const MemoryView: React.FC = () => {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Memory</h2>
-        <button
-          onClick={handleClearAll}
-          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
-        >
-          Clear All
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportMemory}
+            className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+          >
+            <DownloadIcon className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            onClick={handleClearAll}
+            className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+          >
+            Clear All
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -526,6 +563,12 @@ const ChatIcon: React.FC<{ className?: string }> = ({ className }) => (
 const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const DownloadIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
   </svg>
 );
 

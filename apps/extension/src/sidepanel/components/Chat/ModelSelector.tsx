@@ -118,7 +118,15 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
       // Handle provider-specific settings
       if (provider === 'webllm') {
         await updateSettings(updates);
-        await loadWebLLM(selectedModel);
+        // Don't await here - let the progress callback handle updates
+        // The loading state will be tracked by webllmStatus
+        loadWebLLM(selectedModel).then(() => {
+          onModelReady?.();
+        }).catch((err) => {
+          setError(err instanceof Error ? err.message : 'Failed to load model');
+        });
+        setIsLoading(false);
+        return; // Early return - progress is tracked by webllmStatus
       } else if (provider === 'openai' || provider === 'anthropic') {
         if (!apiKey.trim()) {
           setError('API key is required');
@@ -155,9 +163,9 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
       }
       
       onModelReady?.();
+      setIsLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -478,10 +486,10 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
         
         <button
           onClick={handleSave}
-          disabled={isLoading || webllmStatus?.status === 'ready'}
+          disabled={isLoading || webllmStatus?.status === 'loading' || webllmStatus?.status === 'ready'}
           className="w-full btn-primary text-xs py-1.5 rounded-lg disabled:opacity-50"
         >
-          {isLoading ? 'Loading...' : webllmStatus?.status === 'ready' ? 'Model Ready' : 'Load Model'}
+          {webllmStatus?.status === 'loading' ? 'Loading...' : webllmStatus?.status === 'ready' ? 'Model Ready' : isLoading ? 'Loading...' : 'Load Model'}
         </button>
       </div>
     );
@@ -566,10 +574,15 @@ export function ModelSelector({ onModelReady, onDismiss, compact = false, provid
       
       <button
         onClick={handleSave}
-        disabled={isLoading || (provider === 'webllm' && webllmStatus?.status === 'ready')}
+        disabled={isLoading || (provider === 'webllm' && (webllmStatus?.status === 'ready' || webllmStatus?.status === 'loading'))}
         className="w-full btn-primary py-2.5 rounded-lg font-medium disabled:opacity-50"
       >
-        {isLoading ? (
+        {webllmStatus?.status === 'loading' ? (
+          <span className="flex items-center justify-center gap-2">
+            <LoadingSpinner className="w-4 h-4" />
+            Loading Model...
+          </span>
+        ) : isLoading ? (
           <span className="flex items-center justify-center gap-2">
             <LoadingSpinner className="w-4 h-4" />
             {provider === 'webllm' ? 'Loading Model...' : 'Saving...'}

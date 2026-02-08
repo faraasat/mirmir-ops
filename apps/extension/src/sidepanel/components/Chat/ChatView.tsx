@@ -8,6 +8,61 @@ import { VoiceButton } from './VoiceButton';
 import { WebLLMStatus } from './WebLLMStatus';
 import { ModelSelector } from './ModelSelector';
 import { createContextualPrompt } from '@/lib/llm/prompts';
+import type { LLMProvider } from '@/shared/types';
+
+// Helper to get display name for the current model
+function getModelDisplayName(provider: LLMProvider, model: string | undefined, webllmStatus: { status: string } | null): string {
+  if (provider === 'webllm') {
+    if (webllmStatus?.status === 'ready') {
+      // Shorten WebLLM model names
+      const shortNames: Record<string, string> = {
+        'Phi-3-mini-4k-instruct-q4f16_1-MLC': 'Phi-3 Mini',
+        'Llama-3.1-8B-Instruct-q4f16_1-MLC': 'Llama 3.1 8B',
+        'Mistral-7B-Instruct-v0.2-q4f16_1': 'Mistral 7B',
+        'gemma-2b-it-q4f16_1-MLC': 'Gemma 2B',
+        'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC': 'TinyLlama 1.1B',
+      };
+      return shortNames[model || ''] || model || 'Local AI';
+    }
+    return 'Not loaded';
+  }
+  if (provider === 'openai') {
+    const shortNames: Record<string, string> = {
+      'gpt-4o': 'GPT-4o',
+      'gpt-4o-mini': 'GPT-4o Mini',
+      'gpt-4-turbo': 'GPT-4 Turbo',
+      'gpt-3.5-turbo': 'GPT-3.5',
+    };
+    return shortNames[model || ''] || model || 'OpenAI';
+  }
+  if (provider === 'anthropic') {
+    const shortNames: Record<string, string> = {
+      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+      'claude-3-opus-20240229': 'Claude 3 Opus',
+      'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
+      'claude-3-haiku-20240307': 'Claude 3 Haiku',
+    };
+    return shortNames[model || ''] || model || 'Claude';
+  }
+  if (provider === 'ollama') {
+    return model || 'Ollama';
+  }
+  if (provider === 'byok') {
+    return model || 'Custom';
+  }
+  return 'AI';
+}
+
+function getProviderIcon(provider: LLMProvider): string {
+  switch (provider) {
+    case 'webllm': return '🖥️';
+    case 'openai': return '🟢';
+    case 'anthropic': return '🟣';
+    case 'ollama': return '🦙';
+    case 'byok': return '🔧';
+    default: return '🤖';
+  }
+}
 
 export function ChatView() {
   const { messages, isLoading, settings, addMessage, updateMessage, setLoading, setView } = useAppStore();
@@ -165,9 +220,39 @@ export function ChatView() {
   }, [loadWebLLM, settings.defaultModel]);
 
   const configMsg = getConfigurationMessage();
+  const modelDisplayName = getModelDisplayName(settings.defaultLLMProvider, settings.defaultModel, webllmStatus);
+  const providerIcon = getProviderIcon(settings.defaultLLMProvider);
   
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Model Status Bar (always visible) */}
+      {!showModelSelector && !needsConfiguration && (
+        <div className="shrink-0 px-3 py-1.5 bg-muted/30 border-b border-border flex items-center justify-between">
+          <button 
+            onClick={() => setShowModelSelector(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>{providerIcon}</span>
+            <span className="font-medium">{modelDisplayName}</span>
+            <ChevronDownIcon className="w-3 h-3" />
+          </button>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            {webllmStatus?.status === 'ready' && settings.defaultLLMProvider === 'webllm' && (
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Local
+              </span>
+            )}
+            {settings.defaultLLMProvider !== 'webllm' && (
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                Cloud
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+      
       {/* Configuration Banner (show when provider needs setup) */}
       {needsConfiguration && !showModelSelector && (
         <div className="shrink-0 p-3 bg-primary/5 border-b border-primary/20">
@@ -283,6 +368,14 @@ function BrainIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }

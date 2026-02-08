@@ -53,8 +53,29 @@ export interface RecentActivity {
 class AdminAPI {
   private token: string | null = null;
 
-  setToken(token: string) {
+  setToken(token: string | null) {
     this.token = token;
+    // Also store in sessionStorage for persistence across page navigations
+    if (typeof window !== 'undefined') {
+      if (token) {
+        sessionStorage.setItem('admin_api_token', token);
+      } else {
+        sessionStorage.removeItem('admin_api_token');
+      }
+    }
+  }
+
+  getToken(): string | null {
+    // Try instance variable first, then sessionStorage
+    if (this.token) return this.token;
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('admin_api_token');
+      if (stored) {
+        this.token = stored;
+        return stored;
+      }
+    }
+    return null;
   }
 
   private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -63,8 +84,9 @@ class AdminAPI {
       ...options.headers as Record<string, string>,
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${API_URL}${endpoint}`, {
