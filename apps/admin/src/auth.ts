@@ -6,6 +6,7 @@ import Credentials from 'next-auth/providers/credentials';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const authOptions = {
+  secret: process.env.AUTH_SECRET,
   providers: [
     Credentials({
       name: 'Admin Login',
