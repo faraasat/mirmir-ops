@@ -16,6 +16,8 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
+  // Use relative paths for extension assets
+  base: './',
   build: {
     outDir: `dist/${browser}`,
     rollupOptions: {

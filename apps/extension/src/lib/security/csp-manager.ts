@@ -36,9 +36,23 @@ const violations: CSPViolation[] = [];
 const MAX_VIOLATIONS = 100;
 
 /**
+ * Check if we're in a service worker context (no DOM access)
+ */
+function isServiceWorker(): boolean {
+  return typeof document === 'undefined' || typeof window === 'undefined';
+}
+
+/**
  * Initialize CSP violation listener
+ * Note: This only works in document contexts (sidepanel, options page), not in service workers
  */
 export function initializeCSPMonitor(): void {
+  // Skip in service worker context - no DOM available
+  if (isServiceWorker()) {
+    console.log('[CSPManager] Skipping CSP monitor in service worker context');
+    return;
+  }
+  
   // Listen for CSP violation reports
   document.addEventListener('securitypolicyviolation', (event) => {
     const violation: CSPViolation = {
@@ -91,42 +105,86 @@ export function clearCSPViolations(): void {
 
 /**
  * Perform security check on extension
+ * Note: DOM checks only run in document contexts, not in service workers
  */
 export function performSecurityCheck(): SecurityCheckResult {
   const checks: SecurityCheckResult['checks'] = [];
   
-  // Check 1: Verify no inline scripts (except in sidepanel)
-  const inlineScripts = document.querySelectorAll('script:not([src])');
-  checks.push({
-    name: 'No inline scripts',
-    passed: inlineScripts.length === 0,
-    message: inlineScripts.length === 0
-      ? 'No inline scripts found'
-      : `Found ${inlineScripts.length} inline script(s)`,
-    severity: 'high',
-  });
-  
-  // Check 2: Verify no inline event handlers
-  const elementsWithHandlers = document.querySelectorAll('[onclick], [onload], [onerror], [onmouseover]');
-  checks.push({
-    name: 'No inline event handlers',
-    passed: elementsWithHandlers.length === 0,
-    message: elementsWithHandlers.length === 0
-      ? 'No inline event handlers found'
-      : `Found ${elementsWithHandlers.length} element(s) with inline handlers`,
-    severity: 'medium',
-  });
-  
-  // Check 3: Verify secure context (HTTPS or extension)
-  const isSecure = window.isSecureContext;
-  checks.push({
-    name: 'Secure context',
-    passed: isSecure,
-    message: isSecure
-      ? 'Running in secure context'
-      : 'Not running in secure context',
-    severity: 'critical',
-  });
+  // Skip DOM checks in service worker context
+  if (!isServiceWorker()) {
+    // Check 1: Verify no inline scripts (except in sidepanel)
+    const inlineScripts = document.querySelectorAll('script:not([src])');
+    checks.push({
+      name: 'No inline scripts',
+      passed: inlineScripts.length === 0,
+      message: inlineScripts.length === 0
+        ? 'No inline scripts found'
+        : `Found ${inlineScripts.length} inline script(s)`,
+      severity: 'high',
+    });
+    
+    // Check 2: Verify no inline event handlers
+    const elementsWithHandlers = document.querySelectorAll('[onclick], [onload], [onerror], [onmouseover]');
+    checks.push({
+      name: 'No inline event handlers',
+      passed: elementsWithHandlers.length === 0,
+      message: elementsWithHandlers.length === 0
+        ? 'No inline event handlers found'
+        : `Found ${elementsWithHandlers.length} element(s) with inline handlers`,
+      severity: 'medium',
+    });
+    
+    // Check 3: Verify secure context (HTTPS or extension)
+    const isSecure = window.isSecureContext;
+    checks.push({
+      name: 'Secure context',
+      passed: isSecure,
+      message: isSecure
+        ? 'Running in secure context'
+        : 'Not running in secure context',
+      severity: 'critical',
+    });
+    
+    // Check 5: Verify localStorage is available (indicates proper extension context)
+    let storageAvailable = false;
+    try {
+      localStorage.setItem('__test__', '__test__');
+      localStorage.removeItem('__test__');
+      storageAvailable = true;
+    } catch {
+      storageAvailable = false;
+    }
+    checks.push({
+      name: 'Storage available',
+      passed: storageAvailable,
+      message: storageAvailable
+        ? 'Local storage is available'
+        : 'Local storage is not available',
+      severity: 'medium',
+    });
+    
+    // Check 6: Verify Web Crypto API is available
+    const cryptoAvailable = !!(window.crypto && window.crypto.subtle);
+    checks.push({
+      name: 'Web Crypto API available',
+      passed: cryptoAvailable,
+      message: cryptoAvailable
+        ? 'Web Crypto API is available'
+        : 'Web Crypto API is not available',
+      severity: 'high',
+    });
+  } else {
+    // Service worker context - check crypto availability via globalThis
+    const cryptoAvailable = !!(globalThis.crypto && globalThis.crypto.subtle);
+    checks.push({
+      name: 'Web Crypto API available',
+      passed: cryptoAvailable,
+      message: cryptoAvailable
+        ? 'Web Crypto API is available'
+        : 'Web Crypto API is not available',
+      severity: 'high',
+    });
+  }
   
   // Check 4: Check for eval() usage (not possible to detect at runtime, assume pass)
   checks.push({
@@ -134,35 +192,6 @@ export function performSecurityCheck(): SecurityCheckResult {
     passed: true,
     message: 'eval() usage must be verified via code review',
     severity: 'critical',
-  });
-  
-  // Check 5: Verify localStorage is available (indicates proper extension context)
-  let storageAvailable = false;
-  try {
-    localStorage.setItem('__test__', '__test__');
-    localStorage.removeItem('__test__');
-    storageAvailable = true;
-  } catch {
-    storageAvailable = false;
-  }
-  checks.push({
-    name: 'Storage available',
-    passed: storageAvailable,
-    message: storageAvailable
-      ? 'Local storage is available'
-      : 'Local storage is not available',
-    severity: 'medium',
-  });
-  
-  // Check 6: Verify Web Crypto API is available
-  const cryptoAvailable = !!(window.crypto && window.crypto.subtle);
-  checks.push({
-    name: 'Web Crypto API available',
-    passed: cryptoAvailable,
-    message: cryptoAvailable
-      ? 'Web Crypto API is available'
-      : 'Web Crypto API is not available',
-    severity: 'high',
   });
   
   // Check 7: No recent CSP violations

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useLLM } from '../../hooks/useLLM';
 import { useVoiceSynthesis } from '../../hooks/useVoiceSynthesis';
@@ -6,13 +6,15 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { VoiceButton } from './VoiceButton';
 import { WebLLMStatus } from './WebLLMStatus';
+import { ModelSelector } from './ModelSelector';
 import { createContextualPrompt } from '@/lib/llm/prompts';
 
 export function ChatView() {
-  const { messages, isLoading, settings, addMessage, updateMessage, setLoading } = useAppStore();
+  const { messages, isLoading, settings, addMessage, updateMessage, setLoading, setView } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
   const lastSpokenMessageRef = useRef<string | null>(null);
+  const [showModelSelector, setShowModelSelector] = useState(false);
   
   // Voice synthesis for responses
   const { speak, stop: stopSpeaking, isSpeaking } = useVoiceSynthesis();
@@ -53,6 +55,10 @@ export function ChatView() {
     },
   });
 
+  // Check if model selection is needed for WebLLM
+  const needsModelSelection = settings.defaultLLMProvider === 'webllm' && 
+    (!webllmStatus || webllmStatus.status !== 'ready');
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -64,14 +70,16 @@ export function ChatView() {
       addMessage({ role: 'user', content: userMessage });
       
       // Create assistant message placeholder for streaming
-      const assistantId = `msg_${Date.now()}_assistant`;
-      streamingMessageIdRef.current = assistantId;
-      
-      addMessage({
+      // Note: addMessage returns the actual ID it creates internally
+      const assistantMessageId = addMessage({
         role: 'assistant',
         content: '',
         isLoading: true,
       });
+      
+      // Store the message ID for updating during streaming/error
+      streamingMessageIdRef.current = assistantMessageId || `msg_${Date.now()}_assistant`;
+      const currentMessageId = streamingMessageIdRef.current;
       
       // Build messages for LLM
       const systemPrompt = createContextualPrompt({
@@ -92,8 +100,26 @@ export function ChatView() {
       
       try {
         await stream(llmMessages, settings.defaultLLMProvider);
+      } catch (error) {
+        // Handle any uncaught errors
+        console.error('[ChatView] Error sending message:', error);
+        const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
+        updateMessage(currentMessageId, {
+          content: `Sorry, I couldn't process your request. ${errorMsg}`,
+          isLoading: false,
+        });
       } finally {
         setLoading(false);
+        // Ensure the loading state is cleared on the message
+        // Use the captured ID to avoid race conditions
+        const lastMessages = useAppStore.getState().messages;
+        const targetMsg = lastMessages.find(m => m.id === currentMessageId);
+        if (targetMsg && targetMsg.isLoading) {
+          updateMessage(currentMessageId, {
+            content: targetMsg.content || 'Sorry, I couldn\'t process your request. Please try again.',
+            isLoading: false,
+          });
+        }
         streamingMessageIdRef.current = null;
       }
     },
@@ -109,14 +135,52 @@ export function ChatView() {
   }, [loadWebLLM, settings.defaultModel]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* WebLLM Status (only show for webllm provider) */}
-      {settings.defaultLLMProvider === 'webllm' && (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Model Selection Banner (show when WebLLM needs model) */}
+      {needsModelSelection && !showModelSelector && (
+        <div className="shrink-0 p-3 bg-primary/5 border-b border-primary/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <BrainIcon className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium truncate">AI Model Required</p>
+                <p className="text-[10px] text-muted-foreground truncate">Select and download a model to chat</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowModelSelector(true)}
+              className="shrink-0 btn-primary text-xs py-1.5 px-3 rounded-lg"
+            >
+              Setup
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Model Selector Modal */}
+      {showModelSelector && (
+        <div className="shrink-0 p-3 border-b border-border">
+          <ModelSelector 
+            compact
+            onModelReady={() => setShowModelSelector(false)}
+            onDismiss={() => {
+              setShowModelSelector(false);
+              setView('settings');
+            }}
+          />
+        </div>
+      )}
+
+      {/* WebLLM Status (only show for webllm provider when loading) */}
+      {settings.defaultLLMProvider === 'webllm' && webllmStatus && 
+        webllmStatus.status !== 'idle' && webllmStatus.status !== 'ready' && (
         <WebLLMStatus status={webllmStatus} onLoad={handleLoadWebLLM} />
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
@@ -136,9 +200,9 @@ export function ChatView() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border p-4 bg-card">
+      <div className="shrink-0 border-t border-border p-3 bg-card">
         <div className="flex items-end gap-2">
-          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming} />
+          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming || needsModelSelection} />
           <VoiceButton 
             onVoiceCommand={handleSendMessage} 
             autoSubmit={settings.voiceAutoSubmit !== false} 
@@ -163,6 +227,14 @@ function StopIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
+  );
+}
+
+function BrainIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
     </svg>
   );
 }

@@ -1,4 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
-  <rect width="128" height="128" rx="24" fill="#0ea5e9"/>
-  <path d="M32 40h64M32 64h48M32 88h32" stroke="white" stroke-width="8" stroke-linecap="round"/>
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#0284c7"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.3)"/>
+      <stop offset="50%" style="stop-color:rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main rounded square -->
+  <rect width="128" height="128" rx="28" fill="url(#bg-gradient)"/>
+  
+  <!-- Shine effect -->
+  <rect width="128" height="64" rx="28" fill="url(#shine)"/>
+  
+  <!-- Letter M with stylized design -->
+  <path d="M32 88V40h8l24 32 24-32h8v48h-12V60l-16 20h-8l-16-20v28H32z" fill="white"/>
+  
+  <!-- AI brain circuit dots -->
+  <circle cx="100" cy="32" r="4" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="108" cy="44" r="3" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="96" cy="24" r="2" fill="rgba(255,255,255,0.5)"/>
+  
+  <!-- Subtle connection lines -->
+  <path d="M100 32L108 44" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M96 24L100 32" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

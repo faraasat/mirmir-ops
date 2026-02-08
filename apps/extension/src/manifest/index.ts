@@ -15,6 +15,11 @@ const baseManifest: ManifestV3Export = {
     128: 'icons/icon-128.png',
   },
 
+  // CSP for WebAssembly (WebLLM) support
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  },
+
   permissions: [
     'activeTab',
     'tabs',
@@ -95,6 +100,18 @@ const baseManifest: ManifestV3Export = {
 // Firefox-specific adjustments
 const firefoxManifest = {
   ...baseManifest,
+  // Firefox doesn't support sidePanel permission, remove it
+  permissions: baseManifest.permissions?.filter(p => p !== 'sidePanel'),
+  // Firefox uses sidebar_action instead of side_panel
+  sidebar_action: {
+    default_panel: 'src/sidepanel/index.html',
+    default_title: 'MirmirOps',
+    default_icon: {
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+      48: 'icons/icon-48.png',
+    },
+  },
   // Firefox uses browser_specific_settings
   browser_specific_settings: {
     gecko: {
@@ -103,6 +120,9 @@ const firefoxManifest = {
     },
   },
 } as unknown as ManifestV3Export;
+
+// Remove side_panel from Firefox manifest (Firefox uses sidebar_action)
+delete (firefoxManifest as unknown as Record<string, unknown>).side_panel;
 
 const manifest = browser === 'firefox' ? firefoxManifest : baseManifest;
 

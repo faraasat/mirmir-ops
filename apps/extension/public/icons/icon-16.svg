@@ -1,4 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-  <rect width="16" height="16" rx="4" fill="#0ea5e9"/>
-  <path d="M4 5h8M4 8h6M4 11h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bg-gradient-16" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#0284c7"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main rounded square -->
+  <rect width="16" height="16" rx="3" fill="url(#bg-gradient-16)"/>
+  
+  <!-- Letter M very simplified -->
+  <path d="M4 12V4h1l3 4 3-4h1v8h-2V7l-2 3h-1L5 7v5H4z" fill="white"/>
 </svg>

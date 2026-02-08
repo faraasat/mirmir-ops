@@ -63,3 +63,4 @@ build
 dist
 *.log
 !example.env
+temp.md

@@ -1,39 +1,72 @@
+import { useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 
-const tabs = [
+// Primary tabs shown in main navigation
+const primaryTabs = [
   { id: 'chat' as const, label: 'Chat', icon: ChatIcon },
   { id: 'history' as const, label: 'History', icon: HistoryIcon },
-  { id: 'workflows' as const, label: 'Flows', icon: WorkflowIcon },
+  { id: 'workflows' as const, label: 'Workflows', icon: WorkflowIcon },
   { id: 'memory' as const, label: 'Memory', icon: BrainIcon },
-  { id: 'analytics' as const, label: 'Stats', icon: AnalyticsIcon },
-  { id: 'permissions' as const, label: 'Perms', icon: ShieldIcon },
+];
+
+// Secondary tabs shown in "More" menu
+const secondaryTabs = [
+  { id: 'analytics' as const, label: 'Analytics', icon: AnalyticsIcon },
+  { id: 'permissions' as const, label: 'Permissions', icon: ShieldIcon },
   { id: 'settings' as const, label: 'Settings', icon: SettingsIcon },
   { id: 'account' as const, label: 'Account', icon: UserIcon },
 ];
 
 export function Header() {
   const { currentView, setView, user } = useAppStore();
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  const isSecondaryView = secondaryTabs.some(tab => tab.id === currentView);
 
   return (
-    <header className="flex flex-col border-b border-border bg-card">
-      <div className="flex items-center justify-between px-4 py-3">
+    <header className="flex flex-col border-b border-border bg-card shrink-0">
+      {/* Top bar with logo and account */}
+      <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white font-bold text-sm">M</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+            <span className="text-white font-bold text-xs">M</span>
           </div>
-          <span className="font-semibold text-lg">MirmirOps</span>
+          <span className="font-semibold text-sm">MirmirOps</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {user ? (
-            <span className="badge badge-primary text-xs capitalize">{user.plan}</span>
+            <span className="badge badge-primary text-[10px] capitalize px-2 py-0.5">{user.plan}</span>
           ) : (
-            <span className="badge badge-secondary text-xs">Free</span>
+            <span className="badge badge-secondary text-[10px] px-2 py-0.5">Free</span>
           )}
+          <button
+            onClick={() => setView('settings')}
+            className={`p-1.5 rounded-md transition-colors ${
+              currentView === 'settings'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+            title="Settings"
+          >
+            <SettingsIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setView('account')}
+            className={`p-1.5 rounded-md transition-colors ${
+              currentView === 'account'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+            title="Account"
+          >
+            <UserIcon className="w-4 h-4" />
+          </button>
         </div>
       </div>
       
-      <nav className="flex">
-        {tabs.map((tab) => {
+      {/* Primary navigation tabs */}
+      <nav className="flex px-2 pb-1 gap-1 relative">
+        {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentView === tab.id;
           
@@ -41,17 +74,66 @@ export function Header() {
             <button
               key={tab.id}
               onClick={() => setView(tab.id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 text-xs transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 px-1 text-[10px] font-medium rounded-md transition-all ${
                 isActive
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
               <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
+              <span className="truncate max-w-full">{tab.label}</span>
             </button>
           );
         })}
+        
+        {/* More menu trigger */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-2 text-[10px] font-medium rounded-md transition-all ${
+              isSecondaryView || showMoreMenu
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+          >
+            <MoreIcon className="w-4 h-4" />
+            <span>More</span>
+          </button>
+          
+          {/* More menu dropdown */}
+          {showMoreMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowMoreMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                {secondaryTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = currentView === tab.id;
+                  
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setView(tab.id);
+                        setShowMoreMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
       </nav>
     </header>
   );
@@ -119,6 +201,14 @@ function UserIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  );
+}
+
+function MoreIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
     </svg>
   );
 }
