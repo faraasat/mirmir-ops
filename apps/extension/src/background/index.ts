@@ -20,6 +20,8 @@ import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';
 import { initializeAnalytics } from '@/lib/analytics';
 import { initializePermissionManager } from '@/lib/permissions';
 import { initializeMemorySystems } from '@/lib/memory';
+import { initializeNotificationManager, setupDesktopNotificationListeners } from '@/lib/notifications';
+import { initializeKeyboardManager } from '@/lib/keyboard';
 
 // Initialize on extension install/update
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -150,6 +152,9 @@ async function initialize() {
   initializeAnalytics();
   await initializePermissionManager();
   await initializeMemorySystems();
+  await initializeNotificationManager();
+  setupDesktopNotificationListeners();
+  await initializeKeyboardManager();
   
   // Set up periodic cleanup (every 30 minutes)
   browser.alarms.create('cleanup-stale-tabs', { periodInMinutes: 30 });
