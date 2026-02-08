@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import type { LLMProvider } from '@/shared/types';
-import { WEBLLM_MODELS } from '@/shared/constants';
+import { 
+  WEBLLM_MODELS, 
+  OPENAI_MODELS, 
+  ANTHROPIC_MODELS, 
+  OLLAMA_MODELS 
+} from '@/shared/constants';
 import { PrivacySettingsView } from './PrivacySettings';
 import { SecurityView } from './SecurityView';
 import { ThemeSettingsView } from './ThemeSettings';
@@ -13,9 +18,9 @@ export function SettingsView() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Settings Tabs */}
-      <div className="flex border-b border-border bg-background sticky top-0 z-10">
+      <div className="flex border-b border-border bg-background shrink-0">
         {(['general', 'privacy', 'security', 'theme'] as const).map((tab) => (
           <button
             key={tab}
@@ -31,26 +36,28 @@ export function SettingsView() {
         ))}
       </div>
 
-      {activeTab === 'privacy' && (
-        <div className="p-4">
-          <PrivacySettingsView />
-        </div>
-      )}
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {activeTab === 'privacy' && (
+          <div className="p-4">
+            <PrivacySettingsView />
+          </div>
+        )}
 
-      {activeTab === 'security' && (
-        <div className="p-4">
-          <SecurityView />
-        </div>
-      )}
+        {activeTab === 'security' && (
+          <div className="p-4">
+            <SecurityView />
+          </div>
+        )}
 
-      {activeTab === 'theme' && (
-        <div className="p-4">
-          <ThemeSettingsView />
-        </div>
-      )}
+        {activeTab === 'theme' && (
+          <div className="p-4">
+            <ThemeSettingsView />
+          </div>
+        )}
 
-      {activeTab === 'general' && (
-        <>
+        {activeTab === 'general' && (
+          <>
       {/* Account Section */}
       <section className="p-4 border-b border-border">
         <h3 className="font-semibold mb-3">Account</h3>
@@ -120,6 +127,7 @@ export function SettingsView() {
             </select>
           </div>
 
+          {/* WebLLM Model Selection */}
           {settings.defaultLLMProvider === 'webllm' && (
             <div>
               <label className="text-sm text-muted-foreground">Local Model</label>
@@ -134,28 +142,206 @@ export function SettingsView() {
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Model will be downloaded when you start chatting
+              </p>
             </div>
           )}
 
-          {(settings.defaultLLMProvider === 'openai' ||
-            settings.defaultLLMProvider === 'anthropic') && (
-            <div>
-              <label className="text-sm text-muted-foreground">API Key</label>
-              <input
-                type="password"
-                value={settings.apiKeys?.[settings.defaultLLMProvider] || ''}
-                onChange={(e) =>
-                  updateSettings({
-                    apiKeys: {
-                      ...settings.apiKeys,
-                      [settings.defaultLLMProvider]: e.target.value,
-                    },
-                  })
-                }
-                placeholder="Enter your API key"
-                className="input mt-1"
-              />
-            </div>
+          {/* OpenAI Configuration */}
+          {settings.defaultLLMProvider === 'openai' && (
+            <>
+              <div>
+                <label className="text-sm text-muted-foreground">API Key</label>
+                <input
+                  type="password"
+                  value={settings.apiKeys?.openai || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        openai: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="sk-..."
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Model</label>
+                <select
+                  value={settings.defaultModel}
+                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                  className="input mt-1"
+                >
+                  {Object.entries(OPENAI_MODELS).map(([id, model]) => (
+                    <option key={id} value={id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Anthropic Configuration */}
+          {settings.defaultLLMProvider === 'anthropic' && (
+            <>
+              <div>
+                <label className="text-sm text-muted-foreground">API Key</label>
+                <input
+                  type="password"
+                  value={settings.apiKeys?.anthropic || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        anthropic: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="sk-ant-..."
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Model</label>
+                <select
+                  value={settings.defaultModel}
+                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                  className="input mt-1"
+                >
+                  {Object.entries(ANTHROPIC_MODELS).map(([id, model]) => (
+                    <option key={id} value={id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Ollama Configuration */}
+          {settings.defaultLLMProvider === 'ollama' && (
+            <>
+              <div>
+                <label className="text-sm text-muted-foreground">Server URL</label>
+                <input
+                  type="url"
+                  value={settings.apiKeys?.ollama || 'http://localhost:11434'}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        ollama: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="http://localhost:11434"
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Model</label>
+                <select
+                  value={settings.defaultModel}
+                  onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                  className="input mt-1"
+                >
+                  {Object.entries(OLLAMA_MODELS).map(([id, model]) => (
+                    <option key={id} value={id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Custom Model Name (optional)</label>
+                <input
+                  type="text"
+                  value={settings.apiKeys?.ollamaCustomModel || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        ollamaCustomModel: e.target.value,
+                      },
+                      defaultModel: e.target.value || settings.defaultModel,
+                    })
+                  }
+                  placeholder="e.g., my-custom-model:latest"
+                  className="input mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use this to specify a model not in the list above
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* BYOK (Bring Your Own Key) Configuration */}
+          {settings.defaultLLMProvider === 'byok' && (
+            <>
+              <div>
+                <label className="text-sm text-muted-foreground">API Endpoint *</label>
+                <input
+                  type="url"
+                  value={settings.apiKeys?.byokEndpoint || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        byokEndpoint: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="https://api.your-provider.com/v1"
+                  className="input mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  OpenAI-compatible API endpoint
+                </p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">API Key (optional)</label>
+                <input
+                  type="password"
+                  value={settings.apiKeys?.byok || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        byok: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Your API key"
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Model Name *</label>
+                <input
+                  type="text"
+                  value={settings.apiKeys?.byokModel || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        byokModel: e.target.value,
+                      },
+                      defaultModel: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., gpt-4, llama-3, mistral"
+                  className="input mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  The model identifier to use with your provider
+                </p>
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -238,7 +424,8 @@ export function SettingsView() {
         </div>
       </section>
         </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

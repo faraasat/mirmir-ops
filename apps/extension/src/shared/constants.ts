@@ -18,26 +18,110 @@ export const STORAGE_KEYS = {
 export const DB_NAME = 'MirmirOpsDB';
 export const DB_VERSION = 1;
 
-// LLM Models
+// LLM Models - WebLLM (Local)
 export const WEBLLM_MODELS = {
-  'Qwen2-0.5B-Instruct-q4f16_1-MLC': {
-    name: 'Qwen2 0.5B',
-    size: '0.5GB',
-    description: 'Ultra-fast, basic tasks',
+  'Llama-3.2-1B-Instruct-q4f16_1-MLC': {
+    name: 'Llama 3.2 1B',
+    size: '~700MB',
+    description: 'Fast, lightweight model for basic tasks',
+    recommended: true,
   },
-  'Phi-3-mini-4k-instruct-q4f16_1-MLC': {
-    name: 'Phi-3 Mini 4K',
-    size: '2.3GB',
-    description: 'Fast responses, simple tasks',
+  'Llama-3.2-3B-Instruct-q4f16_1-MLC': {
+    name: 'Llama 3.2 3B',
+    size: '~1.8GB',
+    description: 'Balanced performance and capability',
   },
-  'Llama-3.1-8B-Instruct-q4f16_1-MLC': {
-    name: 'Llama 3.1 8B',
-    size: '4.5GB',
-    description: 'High quality, complex reasoning',
+  'Phi-3.5-mini-instruct-q4f16_1-MLC': {
+    name: 'Phi 3.5 Mini',
+    size: '~2.3GB',
+    description: 'Great for reasoning and coding',
+  },
+  'gemma-2-2b-it-q4f16_1-MLC': {
+    name: 'Gemma 2 2B',
+    size: '~1.5GB',
+    description: 'Google\'s efficient small model',
+  },
+  'Qwen2.5-1.5B-Instruct-q4f16_1-MLC': {
+    name: 'Qwen 2.5 1.5B',
+    size: '~1GB',
+    description: 'Multilingual support',
   },
 } as const;
 
-export const DEFAULT_WEBLLM_MODEL = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+export const DEFAULT_WEBLLM_MODEL = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
+
+// OpenAI Models
+export const OPENAI_MODELS = {
+  'gpt-4o': {
+    name: 'GPT-4o',
+    description: 'Most capable, multimodal',
+  },
+  'gpt-4o-mini': {
+    name: 'GPT-4o Mini',
+    description: 'Fast and affordable',
+    recommended: true,
+  },
+  'gpt-4-turbo': {
+    name: 'GPT-4 Turbo',
+    description: 'High capability, 128k context',
+  },
+  'gpt-3.5-turbo': {
+    name: 'GPT-3.5 Turbo',
+    description: 'Fast and cost-effective',
+  },
+} as const;
+
+export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
+
+// Anthropic Models
+export const ANTHROPIC_MODELS = {
+  'claude-3-5-sonnet-20241022': {
+    name: 'Claude 3.5 Sonnet',
+    description: 'Best for most tasks',
+    recommended: true,
+  },
+  'claude-3-5-haiku-20241022': {
+    name: 'Claude 3.5 Haiku',
+    description: 'Fastest, affordable',
+  },
+  'claude-3-opus-20240229': {
+    name: 'Claude 3 Opus',
+    description: 'Most powerful',
+  },
+} as const;
+
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-3-5-sonnet-20241022';
+
+// Ollama Models (common ones, user can add custom)
+export const OLLAMA_MODELS = {
+  'llama3.2': {
+    name: 'Llama 3.2',
+    description: 'Latest Llama model',
+    recommended: true,
+  },
+  'llama3.1': {
+    name: 'Llama 3.1',
+    description: 'Powerful general purpose',
+  },
+  'mistral': {
+    name: 'Mistral',
+    description: 'Fast and efficient',
+  },
+  'codellama': {
+    name: 'Code Llama',
+    description: 'Optimized for coding',
+  },
+  'phi3': {
+    name: 'Phi-3',
+    description: 'Microsoft\'s small but capable',
+  },
+  'gemma2': {
+    name: 'Gemma 2',
+    description: 'Google\'s efficient model',
+  },
+} as const;
+
+export const DEFAULT_OLLAMA_MODEL = 'llama3.2';
 
 // API Endpoints (for backend sync)
 declare const __VITE_API_URL__: string | undefined;

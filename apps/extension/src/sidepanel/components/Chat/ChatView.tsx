@@ -55,9 +55,39 @@ export function ChatView() {
     },
   });
 
-  // Check if model selection is needed for WebLLM
-  const needsModelSelection = settings.defaultLLMProvider === 'webllm' && 
-    (!webllmStatus || webllmStatus.status !== 'ready');
+  // Check if configuration is needed for the selected provider
+  const needsConfiguration = (() => {
+    const provider = settings.defaultLLMProvider;
+    
+    if (provider === 'webllm') {
+      return !webllmStatus || webllmStatus.status !== 'ready';
+    }
+    if (provider === 'openai') {
+      return !settings.apiKeys?.openai;
+    }
+    if (provider === 'anthropic') {
+      return !settings.apiKeys?.anthropic;
+    }
+    if (provider === 'ollama') {
+      return !settings.apiKeys?.ollama;
+    }
+    if (provider === 'byok') {
+      return !settings.apiKeys?.byokEndpoint || !settings.apiKeys?.byokModel;
+    }
+    return false;
+  })();
+  
+  const getConfigurationMessage = () => {
+    const provider = settings.defaultLLMProvider;
+    switch (provider) {
+      case 'webllm': return { title: 'AI Model Required', desc: 'Select and download a model to chat' };
+      case 'openai': return { title: 'OpenAI API Key Required', desc: 'Enter your API key to use OpenAI' };
+      case 'anthropic': return { title: 'Anthropic API Key Required', desc: 'Enter your API key to use Claude' };
+      case 'ollama': return { title: 'Ollama Setup Required', desc: 'Configure your Ollama server connection' };
+      case 'byok': return { title: 'Custom Provider Setup', desc: 'Configure your API endpoint and model' };
+      default: return { title: 'Configuration Required', desc: 'Set up your AI provider' };
+    }
+  };
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -134,10 +164,12 @@ export function ChatView() {
     }
   }, [loadWebLLM, settings.defaultModel]);
 
+  const configMsg = getConfigurationMessage();
+  
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Model Selection Banner (show when WebLLM needs model) */}
-      {needsModelSelection && !showModelSelector && (
+      {/* Configuration Banner (show when provider needs setup) */}
+      {needsConfiguration && !showModelSelector && (
         <div className="shrink-0 p-3 bg-primary/5 border-b border-primary/20">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -145,8 +177,8 @@ export function ChatView() {
                 <BrainIcon className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium truncate">AI Model Required</p>
-                <p className="text-[10px] text-muted-foreground truncate">Select and download a model to chat</p>
+                <p className="text-xs font-medium truncate">{configMsg.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{configMsg.desc}</p>
               </div>
             </div>
             <button
@@ -159,11 +191,12 @@ export function ChatView() {
         </div>
       )}
 
-      {/* Model Selector Modal */}
+      {/* Model/Provider Selector */}
       {showModelSelector && (
         <div className="shrink-0 p-3 border-b border-border">
           <ModelSelector 
             compact
+            provider={settings.defaultLLMProvider}
             onModelReady={() => setShowModelSelector(false)}
             onDismiss={() => {
               setShowModelSelector(false);
@@ -202,7 +235,7 @@ export function ChatView() {
       {/* Input Area */}
       <div className="shrink-0 border-t border-border p-3 bg-card">
         <div className="flex items-end gap-2">
-          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming || needsModelSelection} />
+          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming || needsConfiguration} />
           <VoiceButton 
             onVoiceCommand={handleSendMessage} 
             autoSubmit={settings.voiceAutoSubmit !== false} 
