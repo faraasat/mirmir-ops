@@ -8,8 +8,9 @@ import { SettingsView } from './components/Settings/SettingsView';
 import { AnalyticsView } from './components/Analytics/AnalyticsView';
 import { PermissionsView } from './components/Permissions/PermissionsView';
 import { MemoryView } from './components/Memory/MemoryView';
+import { AuthView } from './components/Auth/AuthView';
 
-type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory';
+type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory' | 'account';
 
 export function App() {
   const { currentView, theme, initializeApp } = useAppStore();
@@ -44,6 +45,8 @@ export function App() {
         return <PermissionsView />;
       case 'memory':
         return <MemoryView />;
+      case 'account':
+        return <AuthView />;
       default:
         return <ChatView />;
     }
