@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useVoice } from '../../hooks/useVoice';
 
 export function VoiceButton() {
-  const { setInputText, settings, isVoiceActive, setVoiceActive } = useAppStore();
+  const { setInputText, settings, setVoiceActive } = useAppStore();
   
   const {
     isListening,
@@ -78,10 +78,3 @@ function MicrophoneIcon({ className }: { className?: string }) {
   );
 }
 
-// Extend Window interface for Speech Recognition
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}

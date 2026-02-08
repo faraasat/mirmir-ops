@@ -4,8 +4,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   VoiceRecognition,
   VoiceSynthesis,
-  type VoiceConfig,
-  type VoiceSynthesisConfig,
   type VoiceRecognitionResult,
 } from '@/lib/voice';
 import { useAppStore } from '../store/app-store';

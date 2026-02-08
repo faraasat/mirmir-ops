@@ -2,7 +2,7 @@
 
 import { v4 as uuid } from 'uuid';
 import { getWorkflowDatabase } from './database';
-import type { Workflow, WorkflowExecution, WorkflowFilter, ExecutionStatus } from './types';
+import type { Workflow, WorkflowExecution, WorkflowFilter } from './types';
 
 /**
  * Create a new workflow
@@ -13,13 +13,13 @@ export async function createWorkflow(
   const now = Date.now();
   
   const newWorkflow: Workflow = {
+    ...workflow,
     id: uuid(),
     createdAt: now,
     updatedAt: now,
     runCount: 0,
     successCount: 0,
-    version: '1.0.0',
-    ...workflow,
+    version: workflow.version || '1.0.0',
   };
   
   const db = getWorkflowDatabase();

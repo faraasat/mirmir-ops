@@ -9,7 +9,6 @@ import {
   deleteHistoryEntry,
   deleteHistoryEntries,
   exportHistory,
-  getRecentSessions,
   type HistoryEntry,
   type HistoryFilter,
   type HistoryStats,

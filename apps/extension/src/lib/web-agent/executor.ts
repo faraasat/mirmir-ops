@@ -5,7 +5,6 @@ import type {
   Tool, 
   ToolResult, 
   AgentContext, 
-  CapabilityTier, 
   ActionRequest, 
   PermissionRequest 
 } from './types';

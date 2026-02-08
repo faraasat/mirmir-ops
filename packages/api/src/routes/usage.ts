@@ -98,14 +98,21 @@ usageRouter.get('/limits', authenticate, async (req: AuthRequest, res: Response)
 
   const limits = subscription.customLimits || PLAN_LIMITS[subscription.planType];
 
+  // Calculate remaining with fallback defaults
+  const cloudLlmLimit = limits.cloudLlmRequests ?? 0;
+  const byokLimit = limits.byokRequests ?? 0;
+  const voiceLimit = limits.voiceCommands ?? 0;
+  const shadowTabLimit = limits.shadowTabs ?? 0;
+  const semanticLimit = limits.semanticMemoryEntries ?? 0;
+
   // Calculate remaining
   const remaining = {
-    cloudLlmRequests: limits.cloudLlmRequests === -1 ? -1 : Math.max(0, limits.cloudLlmRequests - totalUsage.cloudLlmRequests),
-    byokRequests: limits.byokRequests === -1 ? -1 : Math.max(0, limits.byokRequests - totalUsage.byokRequests),
-    voiceCommands: limits.voiceCommands === -1 ? -1 : Math.max(0, limits.voiceCommands - totalUsage.voiceCommands),
-    shadowTabs: limits.shadowTabs === -1 ? -1 : Math.max(0, limits.shadowTabs - totalUsage.shadowTabsUsed),
+    cloudLlmRequests: cloudLlmLimit === -1 ? -1 : Math.max(0, cloudLlmLimit - totalUsage.cloudLlmRequests),
+    byokRequests: byokLimit === -1 ? -1 : Math.max(0, byokLimit - totalUsage.byokRequests),
+    voiceCommands: voiceLimit === -1 ? -1 : Math.max(0, voiceLimit - totalUsage.voiceCommands),
+    shadowTabs: shadowTabLimit === -1 ? -1 : Math.max(0, shadowTabLimit - totalUsage.shadowTabsUsed),
     workflowTemplates: limits.workflowTemplates,
-    semanticMemoryEntries: limits.semanticMemoryEntries === -1 ? -1 : Math.max(0, limits.semanticMemoryEntries - totalUsage.semanticEntries),
+    semanticMemoryEntries: semanticLimit === -1 ? -1 : Math.max(0, semanticLimit - totalUsage.semanticEntries),
   };
 
   res.json({

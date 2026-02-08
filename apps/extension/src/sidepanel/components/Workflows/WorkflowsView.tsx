@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import type { Workflow, WorkflowExecution } from '@/lib/workflows';
+import { useState, useEffect, useCallback } from 'react';
+import type { Workflow } from '@/lib/workflows';
 import { 
   getWorkflows, 
   getWorkflowExecutor, 
@@ -12,20 +12,17 @@ import {
 
 export function WorkflowsView() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [recentExecutions, setRecentExecutions] = useState<WorkflowExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [showImport, setShowImport] = useState(false);
 
   const loadWorkflows = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [workflowList, executions] = await Promise.all([
+      const [workflowList] = await Promise.all([
         getWorkflows({ limit: 50 }),
         getRecentExecutions(5),
       ]);
       setWorkflows(workflowList);
-      setRecentExecutions(executions);
     } catch (error) {
       console.error('Failed to load workflows:', error);
     } finally {

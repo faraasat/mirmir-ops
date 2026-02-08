@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import browser from 'webextension-polyfill';
 import type { UserSettings, LLMProvider } from '@/shared/types';
 import { DEFAULT_SETTINGS } from '@/shared/types';

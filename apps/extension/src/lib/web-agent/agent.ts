@@ -179,7 +179,7 @@ export class WebAgent {
    * Process a simple message without context (for quick responses)
    */
   async processSimpleMessage(message: string, pageUrl: string, pageTitle: string): Promise<string> {
-    const context = createMinimalContext(pageUrl, pageTitle);
+    createMinimalContext(pageUrl, pageTitle);
     
     const router = getLLMRouter();
     if (!router) {
@@ -220,7 +220,7 @@ export class WebAgent {
   /**
    * Build the system prompt for the agent
    */
-  private buildSystemPrompt(context: AgentContext, tools: typeof import('./tools').Tool[]): string {
+  private buildSystemPrompt(context: AgentContext, tools: ReturnType<typeof getAvailableTools>): string {
     const parts: string[] = [];
 
     parts.push(`# MirmirOps - Browser Agent

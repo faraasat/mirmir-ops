@@ -1,6 +1,6 @@
 // Web Agent Tools - Available actions the agent can take
 
-import type { Tool, AgentContext, ToolResult, CapabilityTier } from '../types';
+import type { Tool, ToolResult, CapabilityTier } from '../types';
 
 /**
  * Tier 0 - Passive Tools (No page interaction)

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { WebLLMProgress } from '@/lib/llm';
 
 interface WebLLMStatusProps {

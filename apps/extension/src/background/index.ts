@@ -1,18 +1,15 @@
 import browser from 'webextension-polyfill';
 import type { Message, MessageResponse } from '@/shared/types';
-
-// Type augmentation for sidePanel API (Chrome MV3)
-declare module 'webextension-polyfill' {
-  namespace Browser {
-    interface Static {
-      sidePanel?: {
-        setOptions: (options: { enabled?: boolean; path?: string }) => Promise<void>;
-        open: (options: { tabId?: number }) => Promise<void>;
-      };
-    }
-  }
-}
 import { handleMessage } from './message-handler';
+
+// Type for sidePanel API (Chrome MV3)
+interface SidePanelAPI {
+  setOptions: (options: { enabled?: boolean; path?: string }) => Promise<void>;
+  open: (options: { tabId?: number }) => Promise<void>;
+}
+
+// Access sidePanel via type assertion since it's a Chrome-specific API
+const sidePanel = (browser as unknown as { sidePanel?: SidePanelAPI }).sidePanel;
 import { initializeStorage } from './storage';
 import { initializePermissions } from './permissions';
 import { initializeUsageTracker } from './usage-tracker';
@@ -25,8 +22,8 @@ browser.runtime.onInstalled.addListener(async (details) => {
   await initializeStorage();
   
   // Set up side panel behavior
-  if (browser.sidePanel) {
-    await browser.sidePanel.setOptions({
+  if (sidePanel) {
+    await sidePanel.setOptions({
       enabled: true,
     });
   }
@@ -47,8 +44,8 @@ browser.runtime.onInstalled.addListener(async (details) => {
 
 // Handle extension icon click - open side panel
 browser.action.onClicked.addListener(async (tab) => {
-  if (tab.id && browser.sidePanel) {
-    await browser.sidePanel.open({ tabId: tab.id });
+  if (tab.id && sidePanel) {
+    await sidePanel.open({ tabId: tab.id });
   }
 });
 
@@ -85,8 +82,8 @@ browser.commands.onCommand.addListener(async (command) => {
   
   switch (command) {
     case '_execute_action':
-      if (tab?.id && browser.sidePanel) {
-        await browser.sidePanel.open({ tabId: tab.id });
+      if (tab?.id && sidePanel) {
+        await sidePanel.open({ tabId: tab.id });
       }
       break;
     case 'toggle-voice':

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useHistory } from '../../hooks/useHistory';
 import { HistoryItem } from './HistoryItem';
 import type { HistoryEntry, HistoryEntryType } from '@/lib/history';

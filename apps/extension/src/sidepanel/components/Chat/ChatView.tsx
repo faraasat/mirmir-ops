@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useLLM } from '../../hooks/useLLM';
 import { ChatMessage } from './ChatMessage';

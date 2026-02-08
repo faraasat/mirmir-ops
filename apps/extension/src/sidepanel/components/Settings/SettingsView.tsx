@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAppStore } from '../../store/app-store';
 import type { LLMProvider } from '@/shared/types';
 import { WEBLLM_MODELS } from '@/shared/constants';

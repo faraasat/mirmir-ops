@@ -40,7 +40,8 @@ export const WEBLLM_MODELS = {
 export const DEFAULT_WEBLLM_MODEL = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
 
 // API Endpoints (for backend sync)
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+declare const __VITE_API_URL__: string | undefined;
+export const API_BASE_URL = typeof __VITE_API_URL__ !== 'undefined' ? __VITE_API_URL__ : 'http://localhost:3001';
 
 export const API_ENDPOINTS = {
   AUTH_LOGIN: '/auth/login',

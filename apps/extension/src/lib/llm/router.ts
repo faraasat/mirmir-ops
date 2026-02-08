@@ -29,7 +29,6 @@ export interface RouterConfig {
 export class LLMRouter {
   private config: RouterConfig;
   private providers: Map<LLMProvider, LLMProviderInterface> = new Map();
-  private webllmProvider: LLMProviderInterface | null = null;
 
   constructor(config: RouterConfig) {
     this.config = config;
@@ -82,7 +81,6 @@ export class LLMRouter {
   }
 
   setWebLLMProvider(provider: LLMProviderInterface): void {
-    this.webllmProvider = provider;
     this.providers.set('webllm', provider);
   }
 

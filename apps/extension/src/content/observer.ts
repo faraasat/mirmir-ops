@@ -121,7 +121,6 @@ export class DOMObserver {
         
         if (['hidden', 'style', 'class'].includes(attr)) {
           const isNowVisible = this.isVisible(target);
-          const wasVisible = !isNowVisible; // Simplified check
           
           if (this.isModalLike(target)) {
             significantChanges.push({

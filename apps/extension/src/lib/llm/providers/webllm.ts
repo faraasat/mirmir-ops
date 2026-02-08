@@ -74,7 +74,8 @@ export class WebLLMProvider implements LLMProviderInterface {
         return false;
       }
       
-      const gpu = (navigator as Navigator & { gpu: GPU }).gpu;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gpu = (navigator as any).gpu;
       const adapter = await gpu.requestAdapter();
       return adapter !== null;
     } catch {
@@ -92,7 +93,8 @@ export class WebLLMProvider implements LLMProviderInterface {
     }
 
     try {
-      const gpu = (navigator as Navigator & { gpu: GPU }).gpu;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gpu = (navigator as any).gpu;
       const adapter = await gpu.requestAdapter();
       
       if (!adapter) {

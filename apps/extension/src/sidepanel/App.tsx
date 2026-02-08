@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from './store/app-store';
 import { Header } from './components/common/Header';
 import { ChatView } from './components/Chat/ChatView';

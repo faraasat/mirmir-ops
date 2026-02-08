@@ -2,7 +2,6 @@
 
 import browser from 'webextension-polyfill';
 import type { 
-  Workflow, 
   WorkflowStep, 
   WorkflowExecution, 
   StepResult,
@@ -13,8 +12,7 @@ import {
   createExecution, 
   updateExecution, 
   updateWorkflowStats,
-  getWorkflow,
-  getExecution 
+  getWorkflow 
 } from './storage';
 
 export interface ExecutorCallbacks {

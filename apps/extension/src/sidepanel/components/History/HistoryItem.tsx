@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { HistoryEntry } from '@/lib/history';
 
 interface HistoryItemProps {

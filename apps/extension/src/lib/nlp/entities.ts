@@ -5,6 +5,7 @@ import type { ExtractedEntity, EntityType } from './types';
 
 // Extend compromise with additional plugins
 import dates from 'compromise-dates';
+// @ts-expect-error - compromise-numbers types issue
 import numbers from 'compromise-numbers';
 
 // Register plugins

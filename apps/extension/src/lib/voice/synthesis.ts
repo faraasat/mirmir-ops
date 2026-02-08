@@ -15,7 +15,6 @@ export interface VoiceSynthesisCallbacks {
 export class VoiceSynthesis {
   private config: VoiceSynthesisConfig;
   private callbacks: VoiceSynthesisCallbacks = {};
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
   private queue: string[] = [];
   private isSpeaking: boolean = false;
 
@@ -71,7 +70,6 @@ export class VoiceSynthesis {
 
     utterance.onend = () => {
       this.isSpeaking = false;
-      this.currentUtterance = null;
       this.callbacks.onEnd?.();
       
       // Process queue
@@ -91,7 +89,6 @@ export class VoiceSynthesis {
 
     utterance.onerror = (event) => {
       this.isSpeaking = false;
-      this.currentUtterance = null;
       this.callbacks.onError?.(event.error);
     };
 
@@ -99,7 +96,6 @@ export class VoiceSynthesis {
       this.callbacks.onBoundary?.(event.charIndex, event.name);
     };
 
-    this.currentUtterance = utterance;
     window.speechSynthesis.speak(utterance);
   }
 
@@ -129,7 +125,6 @@ export class VoiceSynthesis {
       window.speechSynthesis.cancel();
       this.queue = [];
       this.isSpeaking = false;
-      this.currentUtterance = null;
     }
   }
 

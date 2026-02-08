@@ -14,8 +14,10 @@ browser.runtime.onMessage.addListener(
   (
     message: Message<unknown>,
     _sender: browser.Runtime.MessageSender
-  ): Promise<MessageResponse<unknown>> | boolean => {
-    return handleMessage(message);
+  ): Promise<MessageResponse<unknown>> | true => {
+    // Must return true to indicate async response
+    handleMessage(message);
+    return true;
   }
 );
 
@@ -33,7 +35,7 @@ async function handleMessage(message: Message<unknown>): Promise<MessageResponse
       case 'GET_PAGE_CONTEXT':
         return handleGetPageContext();
 
-      case 'PAGE_READY':
+      case 'PAGE_READY' as string:
         handlePageReady();
         return { success: true };
 

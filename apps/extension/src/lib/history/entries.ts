@@ -3,7 +3,7 @@
 import { v4 as uuid } from 'uuid';
 import { getHistoryDatabase } from './database';
 import { getCurrentSession, updateSessionStats } from './session';
-import type { HistoryEntry, HistoryEntryType, HistoryFilter, HistoryStats } from './types';
+import type { HistoryEntry, HistoryFilter, HistoryStats } from './types';
 
 /**
  * Add a history entry
@@ -222,7 +222,6 @@ export async function deleteHistoryEntries(filter: HistoryFilter): Promise<numbe
  */
 export async function getHistoryStats(): Promise<HistoryStats> {
   const db = getHistoryDatabase();
-  const now = Date.now();
   const todayStart = new Date().setHours(0, 0, 0, 0);
   
   const [totalEntries, totalSessions, todayEntries, allEntries] = await Promise.all([

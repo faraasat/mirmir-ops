@@ -1,6 +1,6 @@
 // Voice Recognition using Web Speech API
 
-import type { VoiceConfig, VoiceRecognitionResult, VoiceState } from './types';
+import type { VoiceConfig, VoiceRecognitionResult } from './types';
 import { DEFAULT_VOICE_CONFIG } from './types';
 
 // Type augmentation for SpeechRecognition

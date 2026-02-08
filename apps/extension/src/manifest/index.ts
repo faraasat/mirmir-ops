@@ -92,7 +92,7 @@ const baseManifest: ManifestV3Export = {
 };
 
 // Firefox-specific adjustments
-const firefoxManifest: ManifestV3Export = {
+const firefoxManifest = {
   ...baseManifest,
   // Firefox uses browser_specific_settings
   browser_specific_settings: {
@@ -101,7 +101,7 @@ const firefoxManifest: ManifestV3Export = {
       strict_min_version: '109.0',
     },
   },
-};
+} as unknown as ManifestV3Export;
 
 const manifest = browser === 'firefox' ? firefoxManifest : baseManifest;
 
