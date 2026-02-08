@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   getHistoryDatabase,
-  queryHistory,
   getHistoryStats,
   deleteHistoryEntry,
   deleteHistoryEntries,
@@ -38,73 +37,105 @@ export interface UseHistoryReturn {
 
 export function useHistory(options: UseHistoryOptions = {}): UseHistoryReturn {
   const [filter, setFilter] = useState<HistoryFilter>(options.filter || { limit: 50 });
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [stats, setStats] = useState<HistoryStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Live query for sessions
   const db = getHistoryDatabase();
+
+  // Live query for sessions — auto-updates when IndexedDB changes
   const sessions = useLiveQuery(
     () => db.sessions.orderBy('startedAt').reverse().limit(10).toArray(),
     [],
     []
   );
 
-  // Load entries
-  const loadEntries = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
+  // Live query for entries — auto-updates when IndexedDB changes
+  const liveEntries = useLiveQuery(
+    () => db.entries.orderBy('timestamp').reverse().limit(filter.limit || 100).toArray(),
+    [filter.limit],
+    []
+  );
+
+  // Apply remaining filters in memory (type, search, etc.)
+  const entries: HistoryEntry[] = (liveEntries || []).filter(entry => {
+    if (filter.type) {
+      const types = Array.isArray(filter.type) ? filter.type : [filter.type];
+      if (!types.includes(entry.type)) return false;
+    }
+    if (filter.sessionId && entry.sessionId !== filter.sessionId) return false;
+    if (filter.startDate && entry.timestamp < filter.startDate) return false;
+    if (filter.endDate && entry.timestamp > filter.endDate) return false;
+    if (filter.url && !entry.context?.url?.includes(filter.url)) return false;
+    if (filter.searchText) {
+      const search = filter.searchText.toLowerCase();
+      const matches =
+        entry.command?.input?.toLowerCase().includes(search) ||
+        entry.action?.type?.toLowerCase().includes(search) ||
+        entry.llm?.response?.toLowerCase().includes(search) ||
+        entry.context?.title?.toLowerCase().includes(search);
+      if (!matches) return false;
+    }
+    if (filter.tags && filter.tags.length > 0) {
+      if (!entry.tags?.some(t => filter.tags!.includes(t))) return false;
+    }
+    if (filter.success !== undefined && entry.result?.success !== filter.success) return false;
+    return true;
+  });
+
+  // Load stats (not live-queryable easily, so we refresh periodically)
+  const loadStats = useCallback(async () => {
     try {
-      const [entriesData, statsData] = await Promise.all([
-        queryHistory(filter),
-        getHistoryStats(),
-      ]);
-      
-      setEntries(entriesData);
+      const statsData = await getHistoryStats();
       setStats(statsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load history');
+      console.warn('[useHistory] Failed to load stats:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [filter]);
+  }, []);
 
-  // Initial load
+  // Initial stats load
   useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+    loadStats();
+  }, [loadStats]);
 
-  // Auto-refresh on filter change
+  // Refresh stats when entries change
+  useEffect(() => {
+    if (liveEntries && liveEntries.length > 0) {
+      loadStats();
+    }
+  }, [liveEntries?.length, loadStats]);
+
+  // Auto-refresh stats periodically
   useEffect(() => {
     if (options.autoRefresh) {
-      const interval = setInterval(loadEntries, 30000);
+      const interval = setInterval(loadStats, 15000);
       return () => clearInterval(interval);
     }
-  }, [loadEntries, options.autoRefresh]);
+  }, [loadStats, options.autoRefresh]);
 
   const refresh = useCallback(async () => {
-    await loadEntries();
-  }, [loadEntries]);
+    await loadStats();
+  }, [loadStats]);
 
   const deleteEntry = useCallback(async (id: string) => {
     try {
       await deleteHistoryEntry(id);
-      await loadEntries();
+      await loadStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete entry');
     }
-  }, [loadEntries]);
+  }, [loadStats]);
 
   const deleteEntries_fn = useCallback(async (deleteFilter: HistoryFilter) => {
     try {
       await deleteHistoryEntries(deleteFilter);
-      await loadEntries();
+      await loadStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete entries');
     }
-  }, [loadEntries]);
+  }, [loadStats]);
 
   const exportToJson = useCallback(async () => {
     return exportHistory({ format: 'json', filter });
