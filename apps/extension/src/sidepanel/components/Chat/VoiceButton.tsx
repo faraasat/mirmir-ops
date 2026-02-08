@@ -57,10 +57,10 @@ export function VoiceButton({ onVoiceCommand, autoSubmit = true }: VoiceButtonPr
   }
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         onClick={toggleListening}
-        className={`btn-icon ${
+        className={`btn-icon shrink-0 ${
           isListening
             ? 'bg-red-500 text-white voice-active'
             : 'bg-muted hover:bg-muted/80'

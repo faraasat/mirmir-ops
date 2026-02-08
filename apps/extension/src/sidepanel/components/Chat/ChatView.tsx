@@ -198,10 +198,7 @@ export function ChatView() {
             compact
             provider={settings.defaultLLMProvider}
             onModelReady={() => setShowModelSelector(false)}
-            onDismiss={() => {
-              setShowModelSelector(false);
-              setView('settings');
-            }}
+            onDismiss={() => setShowModelSelector(false)}
           />
         </div>
       )}
@@ -234,8 +231,18 @@ export function ChatView() {
 
       {/* Input Area */}
       <div className="shrink-0 border-t border-border p-3 bg-card">
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <ChatInput onSendMessage={handleSendMessage} disabled={isLoading || isStreaming || needsConfiguration} />
+          {/* Configuration warning indicator */}
+          {needsConfiguration && (
+            <button
+              onClick={() => setShowModelSelector(true)}
+              className="btn-icon bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 shrink-0"
+              title="AI model not configured - click to setup"
+            >
+              <WarningIcon className="w-5 h-5" />
+            </button>
+          )}
           <VoiceButton 
             onVoiceCommand={handleSendMessage} 
             autoSubmit={settings.voiceAutoSubmit !== false} 
@@ -244,7 +251,7 @@ export function ChatView() {
           {isSpeaking && (
             <button
               onClick={stopSpeaking}
-              className="btn-icon bg-orange-500 text-white hover:bg-orange-600"
+              className="btn-icon bg-orange-500 text-white hover:bg-orange-600 shrink-0"
               title="Stop speaking"
             >
               <StopIcon className="w-5 h-5" />
@@ -260,6 +267,14 @@ function StopIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
+  );
+}
+
+function WarningIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
   );
 }

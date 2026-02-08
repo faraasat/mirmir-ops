@@ -44,6 +44,9 @@ export class WebLLMProvider implements LLMProviderInterface {
   private currentModel: string | null = null;
   private status: WebLLMStatus = 'idle';
   private progressCallback?: (progress: WebLLMProgress) => void;
+  private lastProgress: WebLLMProgress | null = null;
+  private isLoading: boolean = false;
+  private loadingPromise: Promise<void> | null = null;
 
   constructor(config: Partial<WebLLMConfig>) {
     this.config = {
@@ -56,11 +59,26 @@ export class WebLLMProvider implements LLMProviderInterface {
 
   setProgressCallback(callback: (progress: WebLLMProgress) => void): void {
     this.progressCallback = callback;
+    // Immediately send current progress to new callback if loading is in progress
+    if (this.lastProgress && (this.isLoading || this.status === 'ready')) {
+      callback(this.lastProgress);
+    }
   }
 
   private updateProgress(progress: WebLLMProgress): void {
     this.status = progress.status;
+    this.lastProgress = progress;
     this.progressCallback?.(progress);
+  }
+  
+  // Get current progress for components that mount while loading is in progress
+  getCurrentProgress(): WebLLMProgress | null {
+    return this.lastProgress;
+  }
+  
+  // Check if a model is currently being loaded
+  isModelLoading(): boolean {
+    return this.isLoading;
   }
 
   async isAvailable(): Promise<boolean> {
@@ -131,49 +149,69 @@ export class WebLLMProvider implements LLMProviderInterface {
     
     // If same model is already loaded, skip
     if (this.currentModel === model && this.engine) {
+      this.updateProgress({
+        status: 'ready',
+        progress: 1,
+        text: `${model} is ready`,
+      });
       return;
     }
+    
+    // If already loading this model, return the existing promise
+    // This prevents duplicate downloads when switching tabs
+    if (this.isLoading && this.loadingPromise) {
+      console.log('[WebLLM] Model loading already in progress, reusing existing promise');
+      return this.loadingPromise;
+    }
 
+    this.isLoading = true;
     this.updateProgress({
       status: 'loading',
       progress: 0,
       text: `Loading ${model}...`,
     });
 
-    try {
-      // Dynamically import WebLLM
-      const { CreateMLCEngine } = await import('@mlc-ai/web-llm');
+    this.loadingPromise = (async () => {
+      try {
+        // Dynamically import WebLLM
+        const { CreateMLCEngine } = await import('@mlc-ai/web-llm');
 
-      // Create engine with progress callback
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.engine = await CreateMLCEngine(model, {
-        initProgressCallback: (report: { progress: number; text: string }) => {
-          this.updateProgress({
-            status: 'loading',
-            progress: report.progress,
-            text: report.text,
-          });
-        },
-      }) as unknown as WebLLMEngine;
+        // Create engine with progress callback
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.engine = await CreateMLCEngine(model, {
+          initProgressCallback: (report: { progress: number; text: string }) => {
+            this.updateProgress({
+              status: 'loading',
+              progress: report.progress,
+              text: report.text,
+            });
+          },
+        }) as unknown as WebLLMEngine;
 
-      this.currentModel = model;
-      this.config.model = model;
+        this.currentModel = model;
+        this.config.model = model;
 
-      this.updateProgress({
-        status: 'ready',
-        progress: 1,
-        text: `${model} loaded successfully`,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load model';
-      this.updateProgress({
-        status: 'error',
-        progress: 0,
-        text: errorMessage,
-        error: errorMessage,
-      });
-      throw error;
-    }
+        this.updateProgress({
+          status: 'ready',
+          progress: 1,
+          text: `${model} loaded successfully`,
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load model';
+        this.updateProgress({
+          status: 'error',
+          progress: 0,
+          text: errorMessage,
+          error: errorMessage,
+        });
+        throw error;
+      } finally {
+        this.isLoading = false;
+        this.loadingPromise = null;
+      }
+    })();
+    
+    return this.loadingPromise;
   }
 
   async unloadModel(): Promise<void> {

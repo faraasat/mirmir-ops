@@ -12,6 +12,14 @@ interface Message {
   isLoading?: boolean;
 }
 
+// WebLLM progress state
+export interface WebLLMProgress {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  progress: number;
+  text: string;
+  error?: string;
+}
+
 interface AppState {
   // UI State
   currentView: 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory' | 'account';
@@ -32,6 +40,9 @@ interface AppState {
   inputText: string;
   isVoiceActive: boolean;
   
+  // WebLLM State (persists across tab switches)
+  webllmStatus: WebLLMProgress | null;
+  
   // Theme
   theme: 'light' | 'dark' | 'system';
   
@@ -46,6 +57,7 @@ interface AppState {
   setInputText: (text: string) => void;
   
   setVoiceActive: (active: boolean) => void;
+  setWebLLMStatus: (status: WebLLMProgress | null) => void;
   
   updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -76,6 +88,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   ],
   inputText: '',
   isVoiceActive: false,
+  
+  // WebLLM State
+  webllmStatus: null,
   
   // Theme
   theme: 'system',
@@ -117,6 +132,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setInputText: (text) => set({ inputText: text }),
   
   setVoiceActive: (active) => set({ isVoiceActive: active }),
+  
+  setWebLLMStatus: (status) => set({ webllmStatus: status }),
   
   updateSettings: async (updates) => {
     const currentSettings = get().settings;

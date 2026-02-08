@@ -32,15 +32,14 @@ export interface UseLLMReturn {
 }
 
 export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
-  const { settings } = useAppStore();
+  const { settings, webllmStatus, setWebLLMStatus } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [webllmStatus, setWebllmStatus] = useState<WebLLMProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const routerRef = useRef<LLMRouter | null>(null);
 
-  // Initialize router on mount
+  // Initialize router on mount and reconnect progress callback
   useEffect(() => {
     let router = getLLMRouter();
     
@@ -59,18 +58,21 @@ export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
       });
     }
 
-    // Set up WebLLM provider
+    // Set up WebLLM provider with global store callback
+    // This ensures progress updates are stored globally and persist across tab switches
     const webllm = getWebLLMProvider();
-    webllm.setProgressCallback(setWebllmStatus);
+    webllm.setProgressCallback((progress: WebLLMProgress) => {
+      setWebLLMStatus(progress);
+    });
     router.setWebLLMProvider(webllm);
 
     routerRef.current = router;
 
     return () => {
-      // Cleanup
+      // Cleanup - only abort pending requests, don't disconnect progress callback
       abortControllerRef.current?.abort();
     };
-  }, [settings]);
+  }, [settings, setWebLLMStatus]);
 
   const complete = useCallback(
     async (messages: LLMMessage[], provider?: LLMProvider): Promise<LLMResponse | null> => {
