@@ -17,6 +17,8 @@ import { initializeTabManager, updateTabState, cleanupStaleTabs } from './tab-ma
 import { initializeShadowTabManager } from './shadow-tab-manager';
 import { initializeHistoryCleanup, runHistoryCleanup } from '@/lib/history';
 import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';
+import { initializeAnalytics } from '@/lib/analytics';
+import { initializePermissionManager } from '@/lib/permissions';
 
 // Initialize on extension install/update
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -144,6 +146,8 @@ async function initialize() {
   initializeShadowTabManager();
   await initializeHistoryCleanup();
   await initializeScheduler();
+  initializeAnalytics();
+  await initializePermissionManager();
   
   // Set up periodic cleanup (every 30 minutes)
   browser.alarms.create('cleanup-stale-tabs', { periodInMinutes: 30 });

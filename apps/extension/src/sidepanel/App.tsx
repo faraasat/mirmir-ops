@@ -5,8 +5,10 @@ import { ChatView } from './components/Chat/ChatView';
 import { HistoryView } from './components/History/HistoryView';
 import { WorkflowsView } from './components/Workflows/WorkflowsView';
 import { SettingsView } from './components/Settings/SettingsView';
+import { AnalyticsView } from './components/Analytics/AnalyticsView';
+import { PermissionsView } from './components/Permissions/PermissionsView';
 
-type ViewType = 'chat' | 'history' | 'workflows' | 'settings';
+type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions';
 
 export function App() {
   const { currentView, theme, initializeApp } = useAppStore();
@@ -35,6 +37,10 @@ export function App() {
         return <WorkflowsView />;
       case 'settings':
         return <SettingsView />;
+      case 'analytics':
+        return <AnalyticsView />;
+      case 'permissions':
+        return <PermissionsView />;
       default:
         return <ChatView />;
     }

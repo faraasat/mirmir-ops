@@ -14,7 +14,7 @@ interface Message {
 
 interface AppState {
   // UI State
-  currentView: 'chat' | 'history' | 'workflows' | 'settings';
+  currentView: 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions';
   isLoading: boolean;
   error: string | null;
   
