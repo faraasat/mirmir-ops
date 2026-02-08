@@ -91,24 +91,57 @@ export async function clearModelRecords(): Promise<void> {
 }
 
 /**
- * Check if WebLLM cache exists for a model
- * WebLLM stores models in the Cache API with a specific naming convention
+ * Check if WebLLM cache exists for a model using WebLLM's own API
+ * This is the most reliable way to check cache status
  */
 export async function checkWebLLMCache(modelId: string): Promise<boolean> {
   try {
-    // WebLLM uses Cache API with names like 'webllm/model' or 'webllm-<modelId>'
+    // Use WebLLM's built-in cache checking
+    const { hasModelInCache } = await import('@mlc-ai/web-llm');
+    return await hasModelInCache(modelId);
+  } catch (error) {
+    console.log('[ModelCache] Error checking WebLLM cache:', error);
+    // Fallback: check Cache API directly
+    return checkWebLLMCacheFallback(modelId);
+  }
+}
+
+/**
+ * Fallback cache check using Cache API directly
+ * WebLLM stores in caches named 'webllm/model', 'webllm/wasm', 'webllm/config'
+ */
+async function checkWebLLMCacheFallback(modelId: string): Promise<boolean> {
+  try {
     const cacheNames = await caches.keys();
     
-    // Check various cache naming patterns WebLLM might use
-    const hasCache = cacheNames.some(name => 
-      name.includes('webllm') || 
-      name.includes('mlc') ||
-      name.includes(modelId) ||
-      name.includes('model_lib') ||
-      name.includes('wasm')
+    // WebLLM uses these cache names
+    const webllmCacheNames = ['webllm/model', 'webllm/wasm', 'webllm/config'];
+    
+    // Check if any WebLLM cache exists
+    const hasWebLLMCache = cacheNames.some(name => 
+      webllmCacheNames.some(webllmName => name.includes(webllmName))
     );
     
-    return hasCache;
+    if (!hasWebLLMCache) {
+      return false;
+    }
+    
+    // Try to open the model cache and check for entries containing the modelId
+    // Model URLs typically contain the model name
+    const modelCache = await caches.open('webllm/model');
+    const keys = await modelCache.keys();
+    
+    // Check if any cached URL contains the model identifier
+    // WebLLM model URLs look like: https://huggingface.co/mlc-ai/Llama-3.2-1B-Instruct-q4f16_1-MLC/...
+    const hasModelEntries = keys.some(request => {
+      const url = request.url.toLowerCase();
+      const normalizedModelId = modelId.toLowerCase().replace(/-/g, '');
+      const normalizedUrl = url.replace(/-/g, '');
+      return normalizedUrl.includes(normalizedModelId) || 
+             normalizedUrl.includes(modelId.toLowerCase());
+    });
+    
+    return hasModelEntries;
   } catch {
     return false;
   }

@@ -23,9 +23,9 @@ export function Header() {
         </div>
         <div className="flex items-center gap-1">
           {user ? (
-            <span className="badge badge-primary text-[10px] capitalize px-2 py-0.5">{user.plan}</span>
+            <span className="badge badge-primary text-[10px] capitalize px-2 py-0.5 border-1 rounded-md p-1.5 border-primary font-bold cursor-pointer">{user.plan}</span>
           ) : (
-            <span className="badge badge-secondary text-[10px] px-2 py-0.5">Free</span>
+            <span className="badge badge-secondary text-[10px] px-2 py-0.5 border-1 rounded-md p-1.5 border-primary font-bold cursor-pointer">Free</span>
           )}
           <button
             onClick={() => setView('analytics')}

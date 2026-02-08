@@ -152,19 +152,29 @@ export class WebLLMProvider implements LLMProviderInterface {
 
   /**
    * Check if a model is already cached (downloaded previously)
+   * Uses WebLLM's built-in cache check for reliability
    */
   async isModelCached(modelId?: string): Promise<boolean> {
     const model = modelId || this.config.model;
     
-    // Check our record and verify cache still exists
-    const [recorded, cacheExists] = await Promise.all([
-      isModelDownloaded(model),
-      checkWebLLMCache(model),
-    ]);
-    
-    // Return true if we have a record AND cache exists
-    // This handles cases where cache was cleared but our record remains
-    return recorded && cacheExists;
+    try {
+      // Prefer WebLLM's own cache checking API - most reliable
+      const { hasModelInCache } = await import('@mlc-ai/web-llm');
+      const cacheExists = await hasModelInCache(model);
+      
+      console.log(`[WebLLM] Cache check for ${model}: ${cacheExists}`);
+      
+      return cacheExists;
+    } catch (error) {
+      console.log('[WebLLM] Error checking cache with WebLLM API, falling back:', error);
+      // Fallback: check both our record and generic cache check
+      const [recorded, cacheExists] = await Promise.all([
+        isModelDownloaded(model),
+        checkWebLLMCache(model),
+      ]);
+      
+      return recorded && cacheExists;
+    }
   }
 
   async loadModel(modelId?: string): Promise<void> {

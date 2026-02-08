@@ -29,8 +29,15 @@ export function SettingsView() {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
+  // Track previous API key values to detect changes
+  const [prevApiKeys, setPrevApiKeys] = useState<{
+    openai?: string;
+    anthropic?: string;
+    ollama?: string;
+  }>({});
+
   // Fetch models when API key or provider changes
-  const fetchModelsForProvider = useCallback(async () => {
+  const fetchModelsForProvider = useCallback(async (forceRefresh = false) => {
     setModelFetchError(null);
     
     const provider = settings.defaultLLMProvider;
@@ -45,6 +52,10 @@ export function SettingsView() {
       try {
         const models = await fetchOpenAIModels(settings.apiKeys.openai);
         setFetchedModels(models);
+        // Auto-select first model if none selected or current model not in list
+        if (models.length > 0 && (!settings.defaultModel || !models.find(m => m.id === settings.defaultModel))) {
+          updateSettings({ defaultModel: models[0].id });
+        }
       } catch (error) {
         setModelFetchError(error instanceof Error ? error.message : 'Failed to fetch models');
         setFetchedModels([]);
@@ -56,6 +67,10 @@ export function SettingsView() {
       try {
         const models = await fetchAnthropicModels(settings.apiKeys.anthropic);
         setFetchedModels(models);
+        // Auto-select first model if none selected
+        if (models.length > 0 && (!settings.defaultModel || !models.find(m => m.id === settings.defaultModel))) {
+          updateSettings({ defaultModel: models[0].id });
+        }
       } catch (error) {
         setModelFetchError(error instanceof Error ? error.message : 'Failed to validate key');
         setFetchedModels([]);
@@ -63,39 +78,81 @@ export function SettingsView() {
         setIsLoadingModels(false);
       }
     } else if (provider === 'ollama' && settings.apiKeys?.ollama) {
-      setIsLoadingModels(true);
-      try {
-        const models = await fetchOllamaModels(settings.apiKeys.ollama);
-        setFetchedModels(models);
-      } catch (error) {
-        setModelFetchError(error instanceof Error ? error.message : 'Failed to connect to Ollama');
-        setFetchedModels([]);
-      } finally {
-        setIsLoadingModels(false);
+      // Only auto-fetch on explicit request or when URL changes significantly
+      if (forceRefresh) {
+        setIsLoadingModels(true);
+        try {
+          const models = await fetchOllamaModels(settings.apiKeys.ollama);
+          setFetchedModels(models);
+          // Auto-select first model if none selected
+          if (models.length > 0 && (!settings.defaultModel || !models.find(m => m.id === settings.defaultModel))) {
+            updateSettings({ defaultModel: models[0].id });
+          }
+        } catch (error) {
+          setModelFetchError(error instanceof Error ? error.message : 'Failed to connect to Ollama');
+          setFetchedModels([]);
+        } finally {
+          setIsLoadingModels(false);
+        }
       }
     } else if (provider === 'byok' && settings.apiKeys?.byokEndpoint) {
-      setIsLoadingModels(true);
-      try {
-        const models = await fetchBYOKModels(
-          settings.apiKeys.byokEndpoint,
-          settings.apiKeys.byok
-        );
-        setFetchedModels(models);
-      } catch {
-        // Don't show error for BYOK - it's optional
-        setFetchedModels([]);
-      } finally {
-        setIsLoadingModels(false);
+      if (forceRefresh) {
+        setIsLoadingModels(true);
+        try {
+          const models = await fetchBYOKModels(
+            settings.apiKeys.byokEndpoint,
+            settings.apiKeys.byok
+          );
+          setFetchedModels(models);
+        } catch {
+          // Don't show error for BYOK - it's optional
+          setFetchedModels([]);
+        } finally {
+          setIsLoadingModels(false);
+        }
       }
     } else {
       setFetchedModels([]);
     }
-  }, [settings.defaultLLMProvider, settings.apiKeys?.openai, settings.apiKeys?.anthropic, settings.apiKeys?.ollama, settings.apiKeys?.byokEndpoint, settings.apiKeys?.byok]);
+  }, [settings.defaultLLMProvider, settings.apiKeys?.openai, settings.apiKeys?.anthropic, settings.apiKeys?.ollama, settings.apiKeys?.byokEndpoint, settings.apiKeys?.byok, settings.defaultModel, updateSettings]);
 
-  // Fetch models on mount and when relevant settings change
+  // Auto-fetch models when API key is added/changed for OpenAI and Anthropic
   useEffect(() => {
-    fetchModelsForProvider();
-  }, [fetchModelsForProvider]);
+    const provider = settings.defaultLLMProvider;
+    
+    // Check if API key changed for OpenAI
+    if (provider === 'openai' && settings.apiKeys?.openai && settings.apiKeys.openai !== prevApiKeys.openai) {
+      setPrevApiKeys(prev => ({ ...prev, openai: settings.apiKeys?.openai }));
+      // Only fetch if key looks valid (starts with sk-)
+      if (settings.apiKeys.openai.startsWith('sk-')) {
+        fetchModelsForProvider(true);
+      }
+    }
+    
+    // Check if API key changed for Anthropic
+    if (provider === 'anthropic' && settings.apiKeys?.anthropic && settings.apiKeys.anthropic !== prevApiKeys.anthropic) {
+      setPrevApiKeys(prev => ({ ...prev, anthropic: settings.apiKeys?.anthropic }));
+      // Only fetch if key looks valid (starts with sk-ant-)
+      if (settings.apiKeys.anthropic.startsWith('sk-ant-')) {
+        fetchModelsForProvider(true);
+      }
+    }
+  }, [settings.defaultLLMProvider, settings.apiKeys?.openai, settings.apiKeys?.anthropic, prevApiKeys, fetchModelsForProvider]);
+
+  // Fetch on provider change
+  useEffect(() => {
+    // Reset fetched models when provider changes
+    setFetchedModels([]);
+    setModelFetchError(null);
+    
+    // Auto-fetch for providers with valid keys
+    const provider = settings.defaultLLMProvider;
+    if (provider === 'openai' && settings.apiKeys?.openai?.startsWith('sk-')) {
+      fetchModelsForProvider(true);
+    } else if (provider === 'anthropic' && settings.apiKeys?.anthropic?.startsWith('sk-ant-')) {
+      fetchModelsForProvider(true);
+    }
+  }, [settings.defaultLLMProvider]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -233,38 +290,43 @@ export function SettingsView() {
             <>
               <div>
                 <label className="text-sm text-muted-foreground">API Key</label>
-                <div className="flex gap-2 mt-1">
-                  <input
-                    type="password"
-                    value={settings.apiKeys?.openai || ''}
-                    onChange={(e) =>
-                      updateSettings({
-                        apiKeys: {
-                          ...settings.apiKeys,
-                          openai: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="sk-..."
-                    className="input flex-1"
-                  />
-                  {settings.apiKeys?.openai && (
+                <input
+                  type="password"
+                  value={settings.apiKeys?.openai || ''}
+                  onChange={(e) =>
+                    updateSettings({
+                      apiKeys: {
+                        ...settings.apiKeys,
+                        openai: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="sk-..."
+                  className="input mt-1"
+                />
+                {settings.apiKeys?.openai && !settings.apiKeys.openai.startsWith('sk-') && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    API key should start with "sk-"
+                  </p>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-muted-foreground">Model</label>
+                  {settings.apiKeys?.openai && fetchedModels.length > 0 && (
                     <button
-                      onClick={fetchModelsForProvider}
+                      onClick={() => fetchModelsForProvider(true)}
                       disabled={isLoadingModels}
-                      className="btn-secondary text-xs px-3"
+                      className="text-xs text-primary hover:text-primary/80"
                     >
-                      {isLoadingModels ? 'Loading...' : 'Fetch Models'}
+                      {isLoadingModels ? 'Refreshing...' : 'Refresh'}
                     </button>
                   )}
                 </div>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Model</label>
                 {isLoadingModels ? (
                   <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
                     <LoadingSpinner className="w-4 h-4" />
-                    <span>Loading models...</span>
+                    <span>Fetching models from OpenAI...</span>
                   </div>
                 ) : modelFetchError ? (
                   <div className="mt-1">
@@ -282,34 +344,41 @@ export function SettingsView() {
                     </select>
                   </div>
                 ) : fetchedModels.length > 0 ? (
-                  <select
-                    value={settings.defaultModel}
-                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                    className="input mt-1"
-                  >
-                    {fetchedModels.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.name}{model.description ? ` - ${model.description}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {fetchedModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}{model.description ? ` - ${model.description}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ {fetchedModels.length} models available from your account
+                    </p>
+                  </>
                 ) : (
-                  <select
-                    value={settings.defaultModel}
-                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                    className="input mt-1"
-                  >
-                    {Object.entries(OPENAI_MODELS).map(([id, model]) => (
-                      <option key={id} value={id}>
-                        {model.name} - {model.description}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {fetchedModels.length > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    ✓ {fetchedModels.length} models available from your account
-                  </p>
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {Object.entries(OPENAI_MODELS).map(([id, model]) => (
+                        <option key={id} value={id}>
+                          {model.name} - {model.description}
+                        </option>
+                      ))}
+                    </select>
+                    {settings.apiKeys?.openai && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Enter a valid API key to fetch available models
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </>
@@ -334,6 +403,11 @@ export function SettingsView() {
                   placeholder="sk-ant-..."
                   className="input mt-1"
                 />
+                {settings.apiKeys?.anthropic && !settings.apiKeys.anthropic.startsWith('sk-ant-') && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    API key should start with "sk-ant-"
+                  </p>
+                )}
                 {modelFetchError && settings.apiKeys?.anthropic && (
                   <p className="text-xs text-destructive mt-1">{modelFetchError}</p>
                 )}
@@ -343,7 +417,7 @@ export function SettingsView() {
                 {isLoadingModels ? (
                   <div className="input mt-1 flex items-center gap-2 text-muted-foreground">
                     <LoadingSpinner className="w-4 h-4" />
-                    <span>Loading models...</span>
+                    <span>Validating API key...</span>
                   </div>
                 ) : fetchedModels.length > 0 ? (
                   <>
@@ -363,17 +437,24 @@ export function SettingsView() {
                     </p>
                   </>
                 ) : (
-                  <select
-                    value={settings.defaultModel}
-                    onChange={(e) => updateSettings({ defaultModel: e.target.value })}
-                    className="input mt-1"
-                  >
-                    {Object.entries(ANTHROPIC_MODELS).map(([id, model]) => (
-                      <option key={id} value={id}>
-                        {model.name} - {model.description}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      value={settings.defaultModel}
+                      onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+                      className="input mt-1"
+                    >
+                      {Object.entries(ANTHROPIC_MODELS).map(([id, model]) => (
+                        <option key={id} value={id}>
+                          {model.name} - {model.description}
+                        </option>
+                      ))}
+                    </select>
+                    {settings.apiKeys?.anthropic && settings.apiKeys.anthropic.startsWith('sk-ant-') && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Models will be validated when you use the API
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </>
@@ -400,7 +481,7 @@ export function SettingsView() {
                     className="input flex-1"
                   />
                   <button
-                    onClick={fetchModelsForProvider}
+                    onClick={() => fetchModelsForProvider(true)}
                     disabled={isLoadingModels}
                     className="btn-secondary text-xs px-3"
                   >
@@ -500,7 +581,7 @@ export function SettingsView() {
                   />
                   {settings.apiKeys?.byokEndpoint && (
                     <button
-                      onClick={fetchModelsForProvider}
+                      onClick={() => fetchModelsForProvider(true)}
                       disabled={isLoadingModels}
                       className="btn-secondary text-xs px-3"
                     >

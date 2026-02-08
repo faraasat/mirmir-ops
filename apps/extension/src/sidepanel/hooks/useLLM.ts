@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   LLMRouter,
   createLLMRouter,
-  getLLMRouter,
   getWebLLMProvider,
   type LLMProvider,
   type LLMMessage,
@@ -39,24 +38,25 @@ export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
   const abortControllerRef = useRef<AbortController | null>(null);
   const routerRef = useRef<LLMRouter | null>(null);
 
-  // Initialize router on mount and reconnect progress callback
+  // Initialize router on mount and when API keys change
+  // Use specific dependencies to avoid unnecessary recreations
   useEffect(() => {
-    let router = getLLMRouter();
-    
-    if (!router) {
-      router = createLLMRouter({
-        defaultProvider: settings.defaultLLMProvider,
-        providers: {
-          openai: settings.apiKeys?.openai ? { apiKey: settings.apiKeys.openai } : undefined,
-          anthropic: settings.apiKeys?.anthropic ? { apiKey: settings.apiKeys.anthropic } : undefined,
-          ollama: settings.apiKeys?.ollama ? { baseUrl: settings.apiKeys.ollama } : undefined,
-          byok: settings.apiKeys?.byok
-            ? { apiKey: settings.apiKeys.byok, baseUrl: settings.apiKeys.byok }
-            : undefined,
-        },
-        fallbackOrder: ['webllm', 'ollama', 'openai', 'anthropic'],
-      });
-    }
+    // Always recreate router when API keys change to ensure providers are properly configured
+    const router = createLLMRouter({
+      defaultProvider: settings.defaultLLMProvider,
+      providers: {
+        openai: settings.apiKeys?.openai ? { apiKey: settings.apiKeys.openai } : undefined,
+        anthropic: settings.apiKeys?.anthropic ? { apiKey: settings.apiKeys.anthropic } : undefined,
+        ollama: settings.apiKeys?.ollama ? { baseUrl: settings.apiKeys.ollama } : undefined,
+        byok: settings.apiKeys?.byokEndpoint
+          ? { 
+              apiKey: settings.apiKeys.byok || '', 
+              baseUrl: settings.apiKeys.byokEndpoint,
+            }
+          : undefined,
+      },
+      fallbackOrder: ['webllm', 'ollama', 'openai', 'anthropic'],
+    });
 
     // Set up WebLLM provider with global store callback
     // This ensures progress updates are stored globally and persist across tab switches
@@ -72,7 +72,15 @@ export function useLLM(options: UseLLMOptions = {}): UseLLMReturn {
       // Cleanup - only abort pending requests, don't disconnect progress callback
       abortControllerRef.current?.abort();
     };
-  }, [settings, setWebLLMStatus]);
+  }, [
+    settings.defaultLLMProvider,
+    settings.apiKeys?.openai,
+    settings.apiKeys?.anthropic,
+    settings.apiKeys?.ollama,
+    settings.apiKeys?.byok,
+    settings.apiKeys?.byokEndpoint,
+    setWebLLMStatus
+  ]);
 
   const complete = useCallback(
     async (messages: LLMMessage[], provider?: LLMProvider): Promise<LLMResponse | null> => {
