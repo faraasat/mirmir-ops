@@ -50,6 +50,11 @@
 }
 
 @layer base {
+  :root {
+    --density: 1;
+    --spacing-scale: 1;
+  }
+  
   * {
     @apply border-border;
   }
@@ -61,11 +66,30 @@
     width: 100%;
     max-width: 100%;
   }
+  
+  /* Density scaling - applies to padding in components */
+  .density-aware {
+    --p-y: calc(0.5rem * var(--density));
+    --p-x: calc(1rem * var(--density));
+    padding: var(--p-y) var(--p-x);
+  }
 }
+
+/* No animations mode */
+.no-animations,
+.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Density scaling - affects the base rem unit calculation via font size */
+/* The density is applied by adjusting the root font size in theme-manager.ts */
+/* compact: smaller font = tighter spacing, comfortable: larger font = more spacing */
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    border-radius: var(--radius);
   }
 
   .btn-primary {
@@ -85,11 +109,13 @@
   }
 
   .input {
-    @apply flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--radius);
   }
 
   .card {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    @apply border bg-card text-card-foreground shadow-sm;
+    border-radius: var(--radius);
   }
 
   .badge {
@@ -106,6 +132,19 @@
 
   .badge-outline {
     @apply badge text-foreground;
+  }
+  
+  /* Rounded elements that should respect border-radius setting */
+  .rounded-theme {
+    border-radius: var(--radius);
+  }
+  
+  .rounded-theme-lg {
+    border-radius: calc(var(--radius) * 1.5);
+  }
+  
+  .rounded-theme-sm {
+    border-radius: calc(var(--radius) * 0.5);
   }
 }
 

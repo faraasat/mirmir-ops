@@ -11,27 +11,20 @@ import { MemoryView } from './components/Memory/MemoryView';
 import { AuthView } from './components/Auth/AuthView';
 import { WelcomeScreen, useWelcomeScreen } from './components/Welcome/WelcomeScreen';
 import { OnboardingOverlay } from './components/Onboarding/OnboardingOverlay';
+import { initializeThemeManager } from '@/lib/themes';
 
 type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory' | 'account';
 
 export function App() {
-  const { currentView, theme, initializeApp } = useAppStore();
+  const { currentView, initializeApp } = useAppStore();
   const { showWelcome, setShowWelcome, isChecking } = useWelcomeScreen();
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     initializeApp();
+    // Initialize theme manager to apply saved theme settings
+    initializeThemeManager();
   }, [initializeApp]);
-
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
 
   const renderView = () => {
     switch (currentView as ViewType) {

@@ -361,6 +361,45 @@ export async function getActiveThemeColors(): Promise<ThemeColors> {
 }
 
 /**
+ * Convert hex to HSL values (space-separated for CSS)
+ */
+function hexToHSL(hex: string): string {
+  // Remove the hash if present
+  hex = hex.replace(/^#/, '');
+  
+  // Parse r, g, b values
+  let r = parseInt(hex.substring(0, 2), 16) / 255;
+  let g = parseInt(hex.substring(2, 4), 16) / 255;
+  let b = parseInt(hex.substring(4, 6), 16) / 255;
+  
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
+    }
+  }
+  
+  // Return as "h s% l%" format for CSS
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+/**
  * Apply theme to document
  */
 export async function applyTheme(): Promise<void> {
@@ -374,64 +413,72 @@ export async function applyTheme(): Promise<void> {
   root.classList.remove('light', 'dark');
   root.classList.add(resolvedScheme);
   
-  // Apply CSS variables
-  const cssVars: Record<string, string> = {
-    '--color-primary': colors.primary,
-    '--color-primary-hover': colors.primaryHover,
-    '--color-primary-light': colors.primaryLight,
-    '--color-background': colors.background,
-    '--color-background-secondary': colors.backgroundSecondary,
-    '--color-background-tertiary': colors.backgroundTertiary,
-    '--color-surface': colors.surface,
-    '--color-surface-hover': colors.surfaceHover,
-    '--color-surface-active': colors.surfaceActive,
-    '--color-text-primary': colors.textPrimary,
-    '--color-text-secondary': colors.textSecondary,
-    '--color-text-tertiary': colors.textTertiary,
-    '--color-text-inverse': colors.textInverse,
-    '--color-border': colors.border,
-    '--color-border-hover': colors.borderHover,
-    '--color-border-focus': colors.borderFocus,
-    '--color-success': colors.success,
-    '--color-warning': colors.warning,
-    '--color-error': colors.error,
-    '--color-info': colors.info,
-    '--color-accent': colors.accent,
-    '--shadow-color': colors.shadow,
-  };
+  // Convert hex colors to HSL for Tailwind CSS variables
+  // These match the variables defined in styles.css
+  const primaryHSL = hexToHSL(colors.primary);
+  const backgroundHSL = hexToHSL(colors.background);
+  const surfaceHSL = hexToHSL(colors.surface);
+  const textPrimaryHSL = hexToHSL(colors.textPrimary);
+  const textSecondaryHSL = hexToHSL(colors.textSecondary);
+  const borderHSL = hexToHSL(colors.border);
+  const accentHSL = hexToHSL(colors.accent);
+  const errorHSL = hexToHSL(colors.error);
+  const mutedHSL = hexToHSL(colors.backgroundSecondary);
   
-  // Apply font size
-  const fontSizes = {
-    small: '14px',
-    medium: '16px',
-    large: '18px',
-  };
-  cssVars['--font-size-base'] = fontSizes[settings.fontSize];
+  // Apply Tailwind-compatible CSS variables (HSL format without hsl())
+  root.style.setProperty('--primary', primaryHSL);
+  root.style.setProperty('--primary-foreground', resolvedScheme === 'dark' ? '240 10% 3.9%' : '0 0% 98%');
+  root.style.setProperty('--background', backgroundHSL);
+  root.style.setProperty('--foreground', textPrimaryHSL);
+  root.style.setProperty('--card', surfaceHSL);
+  root.style.setProperty('--card-foreground', textPrimaryHSL);
+  root.style.setProperty('--popover', surfaceHSL);
+  root.style.setProperty('--popover-foreground', textPrimaryHSL);
+  root.style.setProperty('--secondary', mutedHSL);
+  root.style.setProperty('--secondary-foreground', textPrimaryHSL);
+  root.style.setProperty('--muted', mutedHSL);
+  root.style.setProperty('--muted-foreground', textSecondaryHSL);
+  root.style.setProperty('--accent', accentHSL);
+  root.style.setProperty('--accent-foreground', textPrimaryHSL);
+  root.style.setProperty('--destructive', errorHSL);
+  root.style.setProperty('--destructive-foreground', '0 0% 98%');
+  root.style.setProperty('--border', borderHSL);
+  root.style.setProperty('--input', borderHSL);
+  root.style.setProperty('--ring', primaryHSL);
   
-  // Apply font family
-  cssVars['--font-family'] = settings.fontFamily;
-  
-  // Apply border radius
+  // Apply border radius (for --radius variable)
   const radii = {
     none: '0',
-    small: '4px',
-    medium: '8px',
-    large: '12px',
+    small: '0.25rem',
+    medium: '0.5rem',
+    large: '0.75rem',
   };
-  cssVars['--border-radius'] = radii[settings.borderRadius];
+  root.style.setProperty('--radius', radii[settings.borderRadius]);
   
-  // Apply density
-  const densities = {
-    compact: '0.75',
-    normal: '1',
-    comfortable: '1.25',
+  // Base font sizes
+  const baseFontSizes = {
+    small: 14,
+    medium: 16,
+    large: 18,
   };
-  cssVars['--density-factor'] = densities[settings.density];
   
-  // Apply all CSS variables
-  for (const [key, value] of Object.entries(cssVars)) {
-    root.style.setProperty(key, value);
-  }
+  // Density multipliers
+  const densityMultipliers = {
+    compact: 0.9,
+    normal: 1,
+    comfortable: 1.1,
+  };
+  
+  // Calculate final font size: base font size * density
+  const baseFontSize = baseFontSizes[settings.fontSize];
+  const densityMultiplier = densityMultipliers[settings.density];
+  const finalFontSize = Math.round(baseFontSize * densityMultiplier);
+  
+  // Apply font size - this affects all rem-based spacing in the UI
+  root.style.fontSize = `${finalFontSize}px`;
+  
+  // Store density as a CSS variable for any components that want explicit density scaling
+  root.style.setProperty('--density', `${densityMultiplier}`);
   
   // Handle animations
   if (!settings.animations) {
@@ -439,6 +486,14 @@ export async function applyTheme(): Promise<void> {
   } else {
     root.classList.remove('no-animations');
   }
+  
+  console.log('[ThemeManager] Applied theme:', {
+    scheme: resolvedScheme,
+    accent: settings.accentColor,
+    fontSize: settings.fontSize,
+    borderRadius: settings.borderRadius,
+    density: settings.density,
+  });
 }
 
 /**
