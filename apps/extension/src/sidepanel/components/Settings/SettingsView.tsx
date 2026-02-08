@@ -1,12 +1,56 @@
+import { useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import type { LLMProvider } from '@/shared/types';
 import { WEBLLM_MODELS } from '@/shared/constants';
+import { PrivacySettingsView } from './PrivacySettings';
+import { SecurityView } from './SecurityView';
+import { ThemeSettingsView } from './ThemeSettings';
+
+type SettingsTab = 'general' | 'privacy' | 'security' | 'theme';
 
 export function SettingsView() {
   const { settings, updateSettings, user, usage } = useAppStore();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {/* Settings Tabs */}
+      <div className="flex border-b border-border bg-background sticky top-0 z-10">
+        {(['general', 'privacy', 'security', 'theme'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 px-3 py-2 text-sm font-medium border-b-2 -mb-px capitalize ${
+              activeTab === tab
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'privacy' && (
+        <div className="p-4">
+          <PrivacySettingsView />
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="p-4">
+          <SecurityView />
+        </div>
+      )}
+
+      {activeTab === 'theme' && (
+        <div className="p-4">
+          <ThemeSettingsView />
+        </div>
+      )}
+
+      {activeTab === 'general' && (
+        <>
       {/* Account Section */}
       <section className="p-4 border-b border-border">
         <h3 className="font-semibold mb-3">Account</h3>
@@ -193,6 +237,8 @@ export function SettingsView() {
           </select>
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }
