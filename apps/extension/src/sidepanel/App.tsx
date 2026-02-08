@@ -7,8 +7,9 @@ import { WorkflowsView } from './components/Workflows/WorkflowsView';
 import { SettingsView } from './components/Settings/SettingsView';
 import { AnalyticsView } from './components/Analytics/AnalyticsView';
 import { PermissionsView } from './components/Permissions/PermissionsView';
+import { MemoryView } from './components/Memory/MemoryView';
 
-type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions';
+type ViewType = 'chat' | 'history' | 'workflows' | 'settings' | 'analytics' | 'permissions' | 'memory';
 
 export function App() {
   const { currentView, theme, initializeApp } = useAppStore();
@@ -41,6 +42,8 @@ export function App() {
         return <AnalyticsView />;
       case 'permissions':
         return <PermissionsView />;
+      case 'memory':
+        return <MemoryView />;
       default:
         return <ChatView />;
     }

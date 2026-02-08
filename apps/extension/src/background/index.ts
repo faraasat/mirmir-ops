@@ -19,6 +19,7 @@ import { initializeHistoryCleanup, runHistoryCleanup } from '@/lib/history';
 import { initializeScheduler, handleScheduledAlarm } from '@/lib/workflows';
 import { initializeAnalytics } from '@/lib/analytics';
 import { initializePermissionManager } from '@/lib/permissions';
+import { initializeMemorySystems } from '@/lib/memory';
 
 // Initialize on extension install/update
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -148,6 +149,7 @@ async function initialize() {
   await initializeScheduler();
   initializeAnalytics();
   await initializePermissionManager();
+  await initializeMemorySystems();
   
   // Set up periodic cleanup (every 30 minutes)
   browser.alarms.create('cleanup-stale-tabs', { periodInMinutes: 30 });
