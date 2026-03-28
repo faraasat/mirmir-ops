@@ -39,7 +39,29 @@ export class DOMController {
 
     click: async (action) => {
       const target = action.target || action.value as string || '';
-      const element = this.smartFindElement(target, 'clickable');
+      
+      // If target looks like CSS selectors (contains commas, #, or complex patterns), try each selector
+      let element: Element | null = null;
+      
+      if (target.includes(',') || target.includes('ytd-') || target.includes('[') || target.startsWith('#') || target.startsWith('.')) {
+        // Try each selector in the comma-separated list
+        const selectors = target.split(',').map(s => s.trim());
+        for (const selector of selectors) {
+          try {
+            const found = document.querySelector(selector);
+            if (found && this.isVisible(found)) {
+              element = found;
+              break;
+            }
+          } catch { /* invalid selector, try next */ }
+        }
+      }
+      
+      // Fall back to smart element finding if selector approach didn't work
+      if (!element) {
+        element = this.smartFindElement(target, 'clickable');
+      }
+      
       if (!element) return { success: false, error: `Element not found: ${target}` };
       
       // Scroll into view first

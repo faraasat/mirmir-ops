@@ -13,12 +13,14 @@ MirmirOps is a browser-native AI assistant that transforms web interaction throu
 
 ### Key Achievements
 - Full Manifest V3 compliance for modern browser extension standards
-- Local-first AI execution via WebLLM with WebGPU acceleration
-- Multi-provider LLM support (WebLLM, OpenAI, Anthropic, Ollama, BYOK)
-- Tiered permission system with audit logging
+- Local-first AI execution via WebLLM with WebGPU acceleration (IndexedDB model persistence)
+- Multi-provider LLM support (WebLLM, OpenAI, Anthropic, Ollama, BYOK) with dynamic model fetching
+- LLM-based multi-step command decomposition for complex browser automation flows
+- Tiered permission system with auto-grant for extension-initiated actions
 - End-to-end encryption for sensitive data storage
 - Cross-site workflow orchestration with shadow tab execution
-- Voice-driven interaction with Web Speech API integration
+- Voice-driven interaction with Web Speech API integration (including TTS for agent responses)
+- Semantic memory integration—commands and interactions stored automatically during chat
 - Subscription-based monetization with three tiers (Free, Pro, Enterprise)
 
 ---
@@ -270,19 +272,21 @@ mirmir-ops/
 
 #### 3.2.2 Content Scripts
 - **DOM Context Extraction**: Gather page structure
-- **Element Interaction**: Click, type, scroll actions
+- **Element Interaction**: Click, type, scroll with smart element finding; CSS selector support; `#first-result` for first search result
 - **Data Extraction**: Extract structured data
 - **Form Detection**: Identify fillable forms
 
 #### 3.2.3 Side Panel UI
-- **ChatView**: Conversational AI interface
-- **HistoryView**: Action history browser
+- **ChatView**: Conversational AI interface with multi-step command decomposition and memory integration
+- **HistoryView**: Action history browser (with error handling for invalid URLs)
 - **WorkflowsView**: Workflow management
 - **MemoryView**: Agent memory inspection
 - **AnalyticsView**: Usage statistics
 - **PermissionsView**: Domain permissions
-- **SettingsView**: Configuration
+- **SettingsView**: Configuration (General, Privacy, Security, Theme, Voice—all wired to storage)
 - **AuthView**: Login/signup
+
+**Error Resilience**: Each view is wrapped in `ViewErrorBoundary`; crashes in one view do not affect others.
 
 ### 3.3 Core Library Modules
 
@@ -399,6 +403,10 @@ interface VoiceSynthesisConfig {
 speak(text) → SpeechSynthesis.speak() → Audio output
 ```
 
+### 5.2.1 Voice Settings (SettingsView)
+
+Configurable options include: voice auto-submit, voice feedback enabled, speaking rate and pitch sliders, and language selection. All are persisted via `chrome.storage.sync`.
+
 ### 5.3 Voice Command Flow
 
 ```
@@ -418,7 +426,31 @@ speak(text) → SpeechSynthesis.speak() → Audio output
 
 ## 6. Natural Language Processing
 
-### 6.1 Intent Classification
+### 6.1 LLM-Based Command Decomposition
+
+Complex user commands (e.g., "open YouTube and play Astronomia") are decomposed via LLM into ordered execution plans. The LLM returns structured steps with action types (`navigate`, `search`, `type`, `click`, `wait`), targets (`url`, `#first-result`, selectors), and values.
+
+```typescript
+// Decomposition result
+interface DecomposedCommand {
+  steps: ExecutionStep[];
+  reasoning?: string;
+}
+
+interface ExecutionStep {
+  action: 'navigate' | 'search' | 'type' | 'click' | 'wait' | 'scroll' | 'extract';
+  target?: string;   // URL, "#first-result", CSS selector, description
+  value?: unknown;   // Search query, typed text, wait duration (ms)
+}
+
+// Intent mapping (for "play X on YouTube")
+// "play astronomia" → navigate(youtube.com) → search(astronomia) → wait(3000) → click(#first-result)
+```
+
+Site-specific handling includes:
+- **#first-result**: Click the first search result (YouTube, Google, Amazon) with fallback to `scripting.executeScript` if DOM-based click fails
+
+### 6.2 Intent Classification (Legacy / Fallback)
 
 ```typescript
 // Intent types
@@ -445,7 +477,7 @@ interface ParsedIntent {
 }
 ```
 
-### 6.2 Entity Extraction
+### 6.3 Entity Extraction
 
 Using Compromise.js for entity recognition:
 
@@ -460,7 +492,7 @@ type EntityType = 'url' | 'email' | 'date' | 'number' | 'selector' | 'text';
 "Under $200" → { type: 'number', value: 200 }
 ```
 
-### 6.3 NLP Pipeline
+### 6.4 NLP Pipeline
 
 ```
 Input Text
@@ -514,13 +546,19 @@ ParsedIntent
 
 ### 7.2 Action Execution Flow
 
+Actions are executed sequentially by the ChatView; extension-initiated actions auto-grant the `mutable-safe` permission tier. Click targets support:
+- **CSS selectors**: Used when `target` looks like a selector (contains `,`, `ytd-`, `[`, `#`, `.`)
+- **#first-result**: Site-specific first search result (YouTube: `ytd-video-renderer`, Google: `.g a`, Amazon: `[data-component-type='s-search-result']`)
+- **Smart element finding**: Fallback when selector search fails
+- **`scripting.executeScript`**: YouTube fallback when DOM-based click fails
+
 ```typescript
 // Action structure
 interface Action {
   id: string;
   type: ActionType;
-  target?: string;      // CSS selector or description
-  value?: unknown;      // Input value
+  target?: string;      // CSS selector, "#first-result", or description
+  value?: unknown;      // Input value or wait duration (ms)
   options?: {
     timeout?: number;
     retries?: number;
@@ -584,6 +622,16 @@ Enterprise: Unlimited
 | **Preference Memory** | IndexedDB | User preferences/constraints |
 | **Context Memory**    | Session   | Current task context         |
 | **Learning Engine**   | IndexedDB | Pattern recognition          |
+
+### 8.1.1 ChatView Memory Integration
+
+Memories are created automatically during chat:
+
+- **On user message**: Command stored; site visit recorded (`recordSiteVisit`) when domain is known
+- **After AI response**: Interaction stored with fact extraction heuristic
+- **After multi-step workflow**: Workflow summary stored via `addMemory`
+
+`initializeSemanticMemory()` runs on ChatView mount; `storeInteractionMemory` persists user-AI pairs and extracts fact-like lines for semantic storage.
 
 ### 8.2 Semantic Memory
 
@@ -797,6 +845,8 @@ const schema = z.object({
 | **Read-Only**        | Navigate, Scroll, Copy | Per-domain | Grouped      |
 | **Mutable-Safe**     | Click, Type, Fill      | Per-action | Individual   |
 | **Mutable-Critical** | Submit, Delete, Pay    | Never      | Always       |
+
+**Note**: For extension-initiated actions (e.g., from ChatView workflows), the message handler auto-grants the `mutable-safe` tier as needed.
 
 ---
 
@@ -1147,6 +1197,7 @@ tests/
 | 5 MB storage limit        | Settings only                   | IndexedDB for large data |
 | Cross-origin restrictions | Shadow tabs limited             | Same-origin workflows    |
 | WebLLM model size         | Large initial download          | Progressive loading      |
+| Invalid history URLs      | Stats/hostname can throw        | try/catch in getHistoryStats, HistoryItem, useHistory |
 
 ### 18.2 Feature Limitations
 
@@ -1232,6 +1283,9 @@ yarn workspace @mirmir/api build
 | Voice Recognition  | `apps/extension/src/lib/voice/recognition.ts` |
 | Web Agent          | `apps/extension/src/lib/web-agent/agent.ts`   |
 | Memory Store       | `apps/extension/src/lib/memory/`              |
+| History Entries    | `apps/extension/src/lib/history/entries.ts`   |
+| ChatView           | `apps/extension/src/sidepanel/components/Chat/ChatView.tsx` |
+| Content Controller | `apps/extension/src/content/controller.ts`   |
 | API Routes         | `packages/api/src/routes/`                    |
 | Admin Auth         | `apps/admin/src/auth.ts`                      |
 
@@ -1254,9 +1308,10 @@ yarn workspace @mirmir/api build
 
 ### 20.5 Version History
 
-| Version | Date     | Changes         |
-| ------- | -------- | --------------- |
-| 0.1.0   | Feb 2026 | Initial release |
+| Version | Date     | Changes                                                                                                                                 |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1.0   | Feb 2026 | Initial release                                                                                                                         |
+| 0.1.1   | Feb 2026 | LLM command decomposition; memory integration in ChatView; YouTube play intent (#first-result); History crash fix; Settings voice options; ViewErrorBoundary |
 
 ---
 
@@ -1265,7 +1320,9 @@ yarn workspace @mirmir/api build
 **Prepared by:** MirmirOps Development Team  
 **Last Updated:** February 8, 2026  
 **Classification:** Technical Documentation  
-**Distribution:** External Reviewers
+**Distribution:** External Reviewers  
+
+**Recent updates (v0.1.1):** Multi-step command decomposition; ChatView memory integration; YouTube play intent and #first-result; History crash fixes; dynamic Settings (voice options); ViewErrorBoundary for view isolation.
 
 ---
 

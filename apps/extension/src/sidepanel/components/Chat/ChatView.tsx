@@ -8,6 +8,8 @@ import { VoiceButton } from './VoiceButton';
 import { WebLLMStatus } from './WebLLMStatus';
 import { createContextualPrompt } from '@/lib/llm/prompts';
 import { logCommand, logAction, logLLMResponse } from '@/lib/history';
+import { addMemory, initializeSemanticMemory } from '@/lib/memory/semantic-memory';
+import { recordSiteVisit } from '@/lib/memory/preference-memory';
 import browser from 'webextension-polyfill';
 
 // ─── Multi-Step Command Decomposition Prompt ─────────────────────────────────
@@ -16,25 +18,32 @@ import browser from 'webextension-polyfill';
 
 const COMMAND_DECOMPOSITION_PROMPT = `You are a command planner for a browser automation assistant. Analyze the user's message and break it into an execution plan.
 
+CRITICAL INTENT UNDERSTANDING:
+- "play X on YouTube" = go to YouTube, search for X, then click/play the first video result
+- "watch X on YouTube" = same as play
+- "listen to X" = if music-related, go to YouTube/Spotify, search, and play
+- "open X and play Y" = navigate to X, search for Y, then click on the result
+- "search X on Y" = navigate to Y if not already there, then search for X
+
 RULES:
 1. If the message contains MULTIPLE independent tasks (connected by "and", "also", "then", "after that", etc.), break them into separate steps.
 2. Steps that depend on a previous step must run AFTER it (sequential). Steps that are independent can run in PARALLEL.
 3. Each step gets a "group" number. Steps with the SAME group number run in parallel. Groups run sequentially (group 1 first, then group 2, etc.).
 4. If a step needs its own browser tab (because it navigates away from the current page while another task uses the current page), set "new_tab": true.
 5. If the message is a simple single task or just conversation, return a single step.
-6. IMPORTANT: For searching ON a specific site (e.g., "search astronomia on YouTube"), use "search" type with the search_query — the system will handle it via URL. Do NOT use "fill" for search boxes.
-7. For "play X on YouTube" or "search X on YouTube", navigate to YouTube first, then use "search" to search on it — the system uses YouTube's search URL automatically.
-8. "click" should specify a short text label of the element to click (e.g., the video title, link text, button label).
+6. IMPORTANT: For searching ON a specific site (e.g., "search astronomia on YouTube"), use "search" type with the search_query — the system will handle it via URL.
+7. After a search step that needs clicking a result, ALWAYS add a "wait" step (3000ms) before the "click" step to let the page load.
+8. For "play" or "watch" actions: include a "click" step targeting the first result (use descriptive text like the video/song title or "#first-result").
 
 STEP TYPES:
-- "search": Search for something. Provide "search_query". If already on a site (YouTube, Google, Amazon etc.), searches ON that site via URL.
 - "navigate": Go to a URL/website. Provide "target" (the URL or site name like "youtube.com" or "YouTube").
-- "click": Click an element on the page. Provide "target" (the visible text of the link/button/video to click).
-- "fill": Type into a specific form field and submit. Provide "target" (field description) and "value" (text to type). Use only when "search" won't work.
+- "search": Search for something. Provide "search_query". Searches ON the current site via URL if on a known site.
+- "wait": Wait for page to load. Provide "duration_ms" (3000 recommended after search).
+- "click": Click an element on the page. Provide "target" (visible text, or "#first-result" for first search result).
+- "fill": Type into a form field. Provide "target" (field description) and "value" (text). Use only when "search" won't work.
 - "extract": Extract/read data from the current page.
 - "summarize": Summarize the current page.
 - "compare": Compare items across sites. Provide "target".
-- "wait": Wait for a page to load. Provide "duration_ms" (default 2000).
 - "chat": Pure conversation, greeting, or general knowledge question.
 
 Respond with ONLY a JSON object (no markdown, no explanation):
@@ -49,12 +58,33 @@ Respond with ONLY a JSON object (no markdown, no explanation):
       "target": "<optional>",
       "value": "<optional>",
       "new_tab": false,
-      "depends_on": []
+      "depends_on": [],
+      "duration_ms": "<optional, for wait steps>"
     }
   ]
 }
 
 EXAMPLES:
+
+User: "open youtube and play astronomia"
+{
+  "steps": [
+    {"id":1,"group":1,"type":"navigate","description":"Open YouTube","target":"youtube.com","new_tab":false,"depends_on":[]},
+    {"id":2,"group":2,"type":"search","description":"Search for Astronomia","search_query":"astronomia","new_tab":false,"depends_on":[1]},
+    {"id":3,"group":3,"type":"wait","description":"Wait for search results","duration_ms":3000,"new_tab":false,"depends_on":[2]},
+    {"id":4,"group":4,"type":"click","description":"Click first video result","target":"#first-result","new_tab":false,"depends_on":[3]}
+  ]
+}
+
+User: "play despacito on youtube"
+{
+  "steps": [
+    {"id":1,"group":1,"type":"navigate","description":"Open YouTube","target":"youtube.com","new_tab":false,"depends_on":[]},
+    {"id":2,"group":2,"type":"search","description":"Search for Despacito","search_query":"despacito","new_tab":false,"depends_on":[1]},
+    {"id":3,"group":3,"type":"wait","description":"Wait for results to load","duration_ms":3000,"new_tab":false,"depends_on":[2]},
+    {"id":4,"group":4,"type":"click","description":"Play first result","target":"#first-result","new_tab":false,"depends_on":[3]}
+  ]
+}
 
 User: "Open youtube, play astronomia song. Then search the top ranking universities and open the times link"
 {
@@ -62,8 +92,10 @@ User: "Open youtube, play astronomia song. Then search the top ranking universit
     {"id":1,"group":1,"type":"navigate","description":"Open YouTube","target":"youtube.com","new_tab":false,"depends_on":[]},
     {"id":2,"group":1,"type":"search","description":"Search top ranking universities on Google","search_query":"top ranking universities in the world","new_tab":true,"depends_on":[]},
     {"id":3,"group":2,"type":"search","description":"Search Astronomia on YouTube","search_query":"astronomia song","new_tab":false,"depends_on":[1]},
-    {"id":4,"group":3,"type":"click","description":"Click first Astronomia video","target":"Astronomia","new_tab":false,"depends_on":[3]},
-    {"id":5,"group":3,"type":"click","description":"Click Times Higher Education link","target":"timeshighereducation","new_tab":true,"depends_on":[2]}
+    {"id":4,"group":3,"type":"wait","description":"Wait for YouTube results","duration_ms":3000,"new_tab":false,"depends_on":[3]},
+    {"id":5,"group":4,"type":"click","description":"Click first Astronomia video","target":"#first-result","new_tab":false,"depends_on":[4]},
+    {"id":6,"group":3,"type":"wait","description":"Wait for Google results","duration_ms":2000,"new_tab":true,"depends_on":[2]},
+    {"id":7,"group":4,"type":"click","description":"Click Times Higher Education link","target":"timeshighereducation","new_tab":true,"depends_on":[6]}
   ]
 }
 
@@ -175,6 +207,33 @@ export function ChatView() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Initialize semantic memory system on mount
+  useEffect(() => {
+    initializeSemanticMemory().catch(err => {
+      console.warn('[ChatView] Failed to initialize semantic memory:', err);
+    });
+  }, []);
+
+  // ─── Helper: Store interaction as memory ─────────────────────────────────
+
+  const storeInteractionMemory = useCallback(async (
+    content: string,
+    type: 'command' | 'fact' | 'interaction' | 'preference' | 'context',
+    context?: { url?: string; domain?: string }
+  ) => {
+    try {
+      await addMemory(content, {
+        type,
+        url: context?.url,
+        domain: context?.domain,
+        importance: type === 'command' ? 0.7 : type === 'fact' ? 0.8 : 0.5,
+        generateEmbedding: true,
+      });
+    } catch (err) {
+      console.warn('[ChatView] Failed to store memory:', err);
+    }
+  }, []);
 
   // ─── Helper: get current tab context for history ─────────────────────────
 
@@ -441,7 +500,7 @@ export function ChatView() {
     streamingMessageIdRef.current = messageId;
     await stream(resultMessages, settings.defaultLLMProvider);
 
-    // Log the LLM summary response to history
+    // Log the LLM summary response to history and memory
     try {
       const context = activeTab
         ? { url: activeTab.url || 'unknown', title: activeTab.title || 'Browser', tabId: primaryTabId }
@@ -456,6 +515,21 @@ export function ChatView() {
           },
           context,
         );
+
+        // Store completed workflow as a memory
+        const domain = context?.url ? (() => {
+          try { return new URL(context.url).hostname; } catch { return undefined; }
+        })() : undefined;
+        await addMemory(
+          `Executed workflow for "${userMessage.slice(0, 80)}": ${steps.length} steps completed. ${finalMsg.content.slice(0, 200)}`,
+          {
+            type: 'interaction',
+            url: context?.url,
+            domain,
+            importance: 0.7,
+            generateEmbedding: true,
+          }
+        ).catch(err => console.warn('[ChatView] Failed to store workflow memory:', err));
       }
     } catch (histErr) {
       console.warn('[ChatView] Failed to log LLM response to history:', histErr);
@@ -485,6 +559,23 @@ export function ChatView() {
         await logCommand(userMessage, tabContext);
       } catch (histErr) {
         console.warn('[ChatView] Failed to log command to history:', histErr);
+      }
+
+      // Store user command in semantic memory
+      const domain = tabContext?.url ? (() => {
+        try { return new URL(tabContext.url).hostname; } catch { return undefined; }
+      })() : undefined;
+      await storeInteractionMemory(
+        `User requested: "${userMessage}"`,
+        'command',
+        { url: tabContext?.url, domain }
+      );
+
+      // Record site visit for preferences if on a webpage
+      if (domain) {
+        try {
+          await recordSiteVisit(domain);
+        } catch { /* ignore */ }
       }
       
       try {
@@ -534,7 +625,7 @@ export function ChatView() {
 
           await stream(llmMessages, settings.defaultLLMProvider);
 
-          // Log the LLM chat response to history
+          // Log the LLM chat response to history and memory
           try {
             const finalMsg = useAppStore.getState().messages.find(m => m.id === currentMessageId);
             if (finalMsg?.content) {
@@ -546,6 +637,22 @@ export function ChatView() {
                 },
                 tabContext,
               );
+
+              // Store the AI response in semantic memory as an interaction
+              await storeInteractionMemory(
+                `AI responded to "${userMessage.slice(0, 50)}...": ${finalMsg.content.slice(0, 300)}`,
+                'interaction',
+                { url: tabContext?.url, domain }
+              );
+
+              // Extract and store any facts from the response (simple heuristic)
+              const lines = finalMsg.content.split('\n').filter(l => l.trim());
+              for (const line of lines.slice(0, 5)) {
+                // Store lines that look like facts (contain "is", "are", "was", etc.)
+                if (/\b(is|are|was|were|has|have|can|will|should|means|refers to)\b/i.test(line) && line.length > 30 && line.length < 500) {
+                  await storeInteractionMemory(line.trim(), 'fact', { url: tabContext?.url, domain });
+                }
+              }
             }
           } catch (histErr) {
             console.warn('[ChatView] Failed to log LLM response to history:', histErr);
@@ -571,7 +678,7 @@ export function ChatView() {
         streamingMessageIdRef.current = null;
       }
     },
-    [messages, settings.defaultLLMProvider, settings.defaultModel, addMessage, updateMessage, setLoading, stream, decomposeCommand, executeMultiStepPlan, getTabContext]
+    [messages, settings.defaultLLMProvider, settings.defaultModel, addMessage, updateMessage, setLoading, stream, decomposeCommand, executeMultiStepPlan, getTabContext, storeInteractionMemory]
   );
 
   const handleLoadWebLLM = useCallback(async () => {
@@ -764,6 +871,26 @@ async function handleClickAction(
   target: string,
   tabId: number,
 ): Promise<string> {
+  // Handle special "#first-result" target for search result pages
+  let resolvedTarget = target;
+  
+  if (target === '#first-result' || target.toLowerCase().includes('first result') || target.toLowerCase().includes('first video')) {
+    // Detect the current site and use appropriate selectors
+    const site = await detectSite(tabId);
+    if (site === 'youtube') {
+      // YouTube video results - try multiple selectors
+      resolvedTarget = 'ytd-video-renderer a#video-title, ytd-rich-item-renderer a#video-title-link, ytd-video-renderer #dismissible';
+    } else if (site === 'google') {
+      // Google search results
+      resolvedTarget = 'div.g a h3, div[data-sokoban-container] a';
+    } else if (site === 'amazon') {
+      resolvedTarget = 'div[data-component-type="s-search-result"] h2 a';
+    } else {
+      // Generic first link/result
+      resolvedTarget = 'a[href]:not([href="#"]):not([href=""]), [role="link"], .result a';
+    }
+  }
+
   // First, try content script click with smart element finding
   try {
     const result = await browser.runtime.sendMessage({
@@ -771,7 +898,7 @@ async function handleClickAction(
       payload: {
         id: `action_${Date.now()}`,
         type: 'click',
-        target: target,
+        target: resolvedTarget,
         value: target,
         permissionTier: 'mutable-safe' as const,
       },
@@ -780,9 +907,42 @@ async function handleClickAction(
     });
 
     if (result?.success) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait longer for video pages to start loading/playing
+      await new Promise(resolve => setTimeout(resolve, 2000));
       return `Clicked on "${target}" successfully. ${result.data?.text ? `Element text: "${result.data.text}"` : ''}`;
     }
+
+    // If the smart click failed, try a more aggressive approach for YouTube
+    const site = await detectSite(tabId);
+    if (site === 'youtube' && (target === '#first-result' || target.toLowerCase().includes('first'))) {
+      // Try executing a direct script to click the first video
+      try {
+        await browser.scripting.executeScript({
+          target: { tabId },
+          func: () => {
+            // Try various YouTube selectors
+            const selectors = [
+              'ytd-video-renderer a#video-title',
+              'ytd-rich-item-renderer a#video-title-link', 
+              'ytd-video-renderer #dismissible a',
+              'a.ytd-video-renderer',
+              '#contents ytd-video-renderer:first-child a',
+            ];
+            for (const sel of selectors) {
+              const el = document.querySelector(sel) as HTMLElement;
+              if (el) {
+                el.click();
+                return true;
+              }
+            }
+            return false;
+          }
+        });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return `Clicked on first YouTube video result`;
+      } catch { /* scripting failed */ }
+    }
+
     return `Could not click on "${target}": ${result?.error || 'Element not found'}`;
   } catch (error) {
     return `Click failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
